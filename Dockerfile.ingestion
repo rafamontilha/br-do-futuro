@@ -1,0 +1,9 @@
+FROM python:3.12-slim
+WORKDIR /app
+COPY pyproject.toml requirements.lock ./
+RUN pip install --no-cache-dir -r requirements.lock
+COPY ingestion ingestion
+RUN pip install --no-cache-dir --no-deps .
+COPY db db
+COPY fixtures fixtures
+ENTRYPOINT ["bdf"]

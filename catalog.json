@@ -1,0 +1,148 @@
+{
+  "methodology_version": "constitution-1.3",
+  "domains": [
+    {
+      "id": 1,
+      "name": "Crescimento e PIB",
+      "owner_role": "Data Steward",
+      "owner_assignment": "pending",
+      "coverage": "planned"
+    },
+    {
+      "id": 2,
+      "name": "Inflação e preços",
+      "owner_role": "Data Steward",
+      "owner_assignment": "pending",
+      "coverage": "pilot"
+    },
+    {
+      "id": 3,
+      "name": "Juros e crédito",
+      "owner_role": "Data Steward",
+      "owner_assignment": "pending",
+      "coverage": "pilot"
+    },
+    {
+      "id": 4,
+      "name": "Famílias e consumo",
+      "owner_role": "Data Steward",
+      "owner_assignment": "pending",
+      "coverage": "planned"
+    },
+    {
+      "id": 5,
+      "name": "Investimento e capital",
+      "owner_role": "Data Steward",
+      "owner_assignment": "pending",
+      "coverage": "planned"
+    },
+    {
+      "id": 6,
+      "name": "Câmbio e setor externo",
+      "owner_role": "Data Steward",
+      "owner_assignment": "pending",
+      "coverage": "planned"
+    },
+    {
+      "id": 7,
+      "name": "Comércio exterior",
+      "owner_role": "Data Steward",
+      "owner_assignment": "pending",
+      "coverage": "planned"
+    },
+    {
+      "id": 8,
+      "name": "Mercado financeiro",
+      "owner_role": "Data Steward",
+      "owner_assignment": "pending",
+      "coverage": "planned"
+    },
+    {
+      "id": 9,
+      "name": "Trabalho",
+      "owner_role": "Data Steward",
+      "owner_assignment": "pending",
+      "coverage": "planned"
+    },
+    {
+      "id": 10,
+      "name": "Demografia e sociedade",
+      "owner_role": "Data Steward",
+      "owner_assignment": "pending",
+      "coverage": "planned"
+    },
+    {
+      "id": 11,
+      "name": "Setores produtivos",
+      "owner_role": "Data Steward",
+      "owner_assignment": "pending",
+      "coverage": "planned"
+    },
+    {
+      "id": 12,
+      "name": "Contas públicas",
+      "owner_role": "Data Steward",
+      "owner_assignment": "pending",
+      "coverage": "pilot"
+    }
+  ],
+  "indicators": [
+    {
+      "name": "IPCA mensal",
+      "domain": 2,
+      "series": 433,
+      "unit": "percent_month",
+      "frequency": "monthly",
+      "origin": "IBGE via BCB/SGS",
+      "revisable": true,
+      "indicator_id": "br.ipca.monthly",
+      "geography": "BR",
+      "adjustment": "non-seasonally-adjusted",
+      "owner_role": "Data Steward",
+      "methodology_version": "sgs-contract-v1",
+      "license_status": "pending_review",
+      "calendar_status": "pending_validation",
+      "source_status": "candidate",
+      "source_uri": "https://api.bcb.gov.br/dados/serie/bcdata.sgs.433/dados",
+      "quality_status": "unavailable"
+    },
+    {
+      "name": "Selic efetiva diária",
+      "domain": 3,
+      "series": 11,
+      "unit": "percent_day",
+      "frequency": "daily",
+      "origin": "BCB/SGS",
+      "revisable": true,
+      "indicator_id": "br.selic.daily",
+      "geography": "BR",
+      "adjustment": "non-seasonally-adjusted",
+      "owner_role": "Data Steward",
+      "methodology_version": "sgs-contract-v1",
+      "license_status": "pending_review",
+      "calendar_status": "pending_validation",
+      "source_status": "candidate",
+      "source_uri": "https://api.bcb.gov.br/dados/serie/bcdata.sgs.11/dados",
+      "quality_status": "unavailable"
+    },
+    {
+      "name": "Dívida bruta do governo geral",
+      "domain": 12,
+      "series": 13762,
+      "unit": "percent_gdp",
+      "frequency": "monthly",
+      "origin": "BCB/SGS",
+      "revisable": true,
+      "indicator_id": "br.debt.gross_pct_gdp",
+      "geography": "BR",
+      "adjustment": "non-seasonally-adjusted",
+      "owner_role": "Data Steward",
+      "methodology_version": "sgs-contract-v1",
+      "license_status": "pending_review",
+      "calendar_status": "pending_validation",
+      "source_status": "candidate",
+      "source_uri": "https://api.bcb.gov.br/dados/serie/bcdata.sgs.13762/dados",
+      "quality_status": "unavailable"
+    }
+  ]
+}
