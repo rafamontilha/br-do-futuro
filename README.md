@@ -45,3 +45,72 @@ brasil-do-futuro/
 ```
 
 **Escopo desta versão:** constituição e contratos conceituais; não inclui integrações implementadas, coleta de dados realizada ou modelo econométrico calibrado.
+
+## Implementação — piloto da fase 0
+
+A constituição acima é preservada como recebida. A implementação inicial é um
+**demonstrador técnico**, não aprovação metodológica nem conclusão do gate 0→1.
+
+### Subir localmente
+
+Requisito: Docker com Compose. As portas são expostas somente em localhost.
+Credenciais no Compose são exclusivas do desenvolvimento local.
+
+```sh
+docker compose up -d --build
+# Carregar exemplos explicitamente sintéticos:
+docker compose run --rm ingestion ingest br.debt.gross_pct_gdp fixtures/debt-initial.json
+docker compose run --rm ingestion ingest br.ipca.monthly fixtures/ipca.json
+docker compose run --rm ingestion ingest br.selic.daily fixtures/selic.json
+docker compose run --rm ingestion worker
+# Exercitar revisão histórica, recálculo e alerta:
+docker compose run --rm ingestion ingest br.debt.gross_pct_gdp fixtures/debt-revised.json
+docker compose run --rm ingestion worker
+```
+
+- Painel: http://localhost:13000/?mode=fixture (demonstração sintética).
+- Capturas de fontes: http://localhost:13000/?mode=source (vazio até capturar).
+- API: http://localhost:18080/v1/indicators.
+- Saúde: http://localhost:18080/healthz.
+- Contrato: [`docs/openapi.yaml`](docs/openapi.yaml).
+
+### Capturar uma janela da origem
+
+```sh
+docker compose run --rm ingestion fetch br.selic.daily --start 2025-01-02 --end 2025-01-10
+docker compose run --rm ingestion worker
+```
+
+O conector usa HTTPS, timeout e retries limitados. Divida históricos em janelas
+não superiores a 3650 dias. Toda captura real recebe `provisional`: confirmação
+de contrato não substitui validação econômica, licença e calendário. SGS não
+informa a data de publicação nesse payload; `published_at` fica nulo, sem confundir
+período de referência com data de divulgação. Falhas de fonte são logadas e não
+substituem observações anteriores nem certificam freshness.
+
+### Validar
+
+```sh
+uv venv --python 3.12
+uv pip install -r requirements.lock
+# Banco descartável exclusivamente para testes; não apontar ao banco do piloto.
+docker compose exec db createdb -U bdf bdf_test
+TEST_DATABASE_URL=postgres://bdf:local-development-only@localhost:55432/bdf_test .venv/bin/pytest -q
+(cd services/api && go test ./... && go vet ./...)
+(cd web && npm ci && npm run build && npm run typecheck)
+```
+
+Sem `TEST_DATABASE_URL`, somente os testes unitários rodam; integrações ficam
+explicitamente skipped. O CI sempre disponibiliza PostgreSQL e executa ambos.
+
+### Operação e limites
+
+- [`docs/execution-plan.md`](docs/execution-plan.md): escopo entregue, próximos incrementos e gates.
+- [`docs/model-routing.md`](docs/model-routing.md): uso de Astra, Sol, Luna e Terra.
+- [`docs/runbook.md`](docs/runbook.md): replay, falhas e limitações de operação.
+- [`docs/source-register.md`](docs/source-register.md): seleção de séries e validações pendentes.
+
+Não há endpoint de aprovação/publicação, credenciais de produção nem job periódico
+habilitado. Recomendações e Guidance não são publicados automaticamente. Grafana,
+exportação OTLP, calibração econômica, backtests, recuperação e aprovação metodológica
+continuam no backlog. A API usa um usuário PostgreSQL de leitura.

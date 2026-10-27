@@ -1,0 +1,42 @@
+name: brasil-do-futuro
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: bdf
+      POSTGRES_USER: bdf
+      POSTGRES_PASSWORD: local-development-only
+    ports: ["127.0.0.1:55432:5432"]
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./db/001_foundation.sql:/docker-entrypoint-initdb.d/001.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bdf -d bdf"]
+      interval: 2s
+      retries: 20
+  ingestion:
+    build:
+      context: .
+      dockerfile: Dockerfile.ingestion
+    environment:
+      DATABASE_URL: postgres://bdf:local-development-only@db:5432/bdf
+    depends_on:
+      db: {condition: service_healthy}
+    profiles: ["tools"]
+  api:
+    build: ./services/api
+    environment:
+      DATABASE_URL: postgres://bdf_reader:local-reader-only@db:5432/bdf
+      CATALOG_PATH: /app/catalog.json
+    volumes: ["./catalog.json:/app/catalog.json:ro"]
+    ports: ["127.0.0.1:${BDF_API_PORT:-18080}:8080"]
+    depends_on:
+      db: {condition: service_healthy}
+  web:
+    build: ./web
+    environment:
+      API_URL: http://api:8080
+    ports: ["127.0.0.1:${BDF_WEB_PORT:-13000}:3000"]
+    depends_on: [api]
+volumes:
+  postgres-data:

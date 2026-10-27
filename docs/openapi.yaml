@@ -1,0 +1,98 @@
+openapi: 3.1.0
+info:
+  title: Brasil do Futuro — piloto de leitura
+  version: 0.1.0
+  description: Dados provisórios ou sintéticos. Não certifica baseline nem atualidade na origem.
+servers:
+  - url: http://localhost:18080
+paths:
+  /healthz:
+    get:
+      summary: Disponibilidade do PostgreSQL
+      responses:
+        '200': {description: Disponível}
+        '503': {description: Banco indisponível}
+  /v1/indicators:
+    get:
+      summary: Catálogo candidato e os 12 domínios
+      parameters:
+        - {$ref: '#/components/parameters/Mode'}
+        - {$ref: '#/components/parameters/AsOf'}
+      responses:
+        '200': {$ref: '#/components/responses/Envelope'}
+        '400': {description: Parâmetros inválidos}
+  /v1/observations:
+    get:
+      summary: Observações conhecidas até as_of, uma versão por série e período
+      parameters:
+        - {$ref: '#/components/parameters/Mode'}
+        - {$ref: '#/components/parameters/AsOf'}
+      responses:
+        '200': {$ref: '#/components/responses/Envelope'}
+        '400': {description: Parâmetros inválidos}
+        '503': {description: Consulta indisponível}
+  /v1/indicators/{id}/observations:
+    get:
+      summary: Histórico da série por data de conhecimento
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - {$ref: '#/components/parameters/Mode'}
+        - {$ref: '#/components/parameters/AsOf'}
+      responses:
+        '200': {$ref: '#/components/responses/Envelope'}
+        '400': {description: Parâmetros inválidos}
+        '503': {description: Consulta indisponível}
+  /v1/scenarios:
+    get:
+      summary: Última execução por cenário conhecida até as_of
+      parameters:
+        - {$ref: '#/components/parameters/Mode'}
+        - {$ref: '#/components/parameters/AsOf'}
+      responses:
+        '200': {$ref: '#/components/responses/Envelope'}
+        '400': {description: Parâmetros inválidos}
+        '503': {description: Consulta indisponível}
+  /v1/alerts:
+    get:
+      summary: Alertas registrados até as_of, todos pendentes de revisão humana
+      parameters:
+        - {$ref: '#/components/parameters/Mode'}
+        - {$ref: '#/components/parameters/AsOf'}
+      responses:
+        '200': {$ref: '#/components/responses/Envelope'}
+        '400': {description: Parâmetros inválidos}
+        '503': {description: Consulta indisponível}
+components:
+  parameters:
+    Mode:
+      name: mode
+      in: query
+      schema: {type: string, enum: [source, fixture], default: source}
+    AsOf:
+      name: as_of
+      in: query
+      description: RFC3339 com timezone. Padrão é o momento da consulta.
+      schema: {type: string, format: date-time}
+  responses:
+    Envelope:
+      description: Metadados temporais e dados; arrays podem estar vazios
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [meta, data]
+            properties:
+              meta:
+                type: object
+                required: [methodology_version, as_of, mode, freshness, baseline_status, publication_status]
+                properties:
+                  methodology_version: {type: string}
+                  as_of: {type: string, format: date-time}
+                  mode: {type: string, enum: [source, fixture]}
+                  freshness: {const: not_verified_against_source}
+                  baseline_status: {const: not_validated}
+                  publication_status: {const: internal_pilot}
+              data:
+                oneOf:
+                  - {type: array, items: {type: object}}
+                  - {type: object}
