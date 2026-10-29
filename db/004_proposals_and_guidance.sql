@@ -1,5 +1,5 @@
 -- Brasil do Futuro - Incremento 03: Método, Propostas Públicas e Guidance Contracts
--- Migração 004
+-- Migração 004 (executada automaticamente pelo runner bdf migrate)
 
 CREATE TABLE IF NOT EXISTS public_proposals (
     id text PRIMARY KEY,

@@ -106,8 +106,8 @@ export function GuidanceCommitmentsMatrix({ initialCommitments }: GuidanceCommit
       </div>
 
       <p style={{ color: "var(--muted, #52675d)", fontSize: "14px", marginTop: "8px", marginBottom: "20px" }}>
-        Separação metodológica rigorosa entre o ponto de partida auditado, a meta proposta para o mandato,
-        a projeção do modelo econômico e o dado oficial apurado. Atualizações de séries nunca apagam metas nem omitem desvios.
+        Separação metodológica rigorosa entre o ponto de partida ilustrativo (baseline experimental), a meta proposta para o mandato,
+        a projeção do modelo econômico e as observações apuradas. Atualizações de séries nunca apagam metas nem omitem desvios.
       </p>
 
       <div
@@ -124,10 +124,10 @@ export function GuidanceCommitmentsMatrix({ initialCommitments }: GuidanceCommit
             <tr style={{ background: "#f8f9f6", borderBottom: "1px solid var(--line, #d5dccf)", color: "var(--muted, #52675d)" }}>
               <th style={{ padding: "14px 16px", fontWeight: 600 }}>Compromisso / Indicador</th>
               <th style={{ padding: "14px 16px", fontWeight: 600 }}>Horizonte</th>
-              <th style={{ padding: "14px 16px", fontWeight: 600 }}>Baseline</th>
+              <th style={{ padding: "14px 16px", fontWeight: 600 }}>Baseline (Ilustrativa)</th>
               <th style={{ padding: "14px 16px", fontWeight: 600 }}>Meta Proposta</th>
               <th style={{ padding: "14px 16px", fontWeight: 600 }}>Projeção (Forecast)</th>
-              <th style={{ padding: "14px 16px", fontWeight: 600 }}>Realizado (Observação Auditada)</th>
+              <th style={{ padding: "14px 16px", fontWeight: 600 }}>Observação Recente (Actual)</th>
               <th style={{ padding: "14px 16px", fontWeight: 600 }}>Desvio (Obs - Meta)</th>
               <th style={{ padding: "14px 16px", fontWeight: 600 }}>Governança</th>
             </tr>
@@ -171,6 +171,20 @@ export function GuidanceCommitmentsMatrix({ initialCommitments }: GuidanceCommit
                   <td style={{ padding: "14px 16px", verticalAlign: "top" }}>
                     <div style={{ fontWeight: 600 }}>{bVal.toFixed(1)} {c.unit}</div>
                     <div style={{ fontSize: "11px", color: "var(--muted, #52675d)" }}>ref: {c.baseline_period}</div>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        marginTop: "4px",
+                        fontSize: "10px",
+                        background: "#f0f4f1",
+                        color: "#52675d",
+                        border: "1px solid #d5dccf",
+                        padding: "1px 6px",
+                        borderRadius: "3px",
+                      }}
+                    >
+                      Ilustrativa
+                    </span>
                   </td>
                   <td style={{ padding: "14px 16px", verticalAlign: "top" }}>
                     <div style={{ fontWeight: 700, color: "var(--green, #216044)" }}>
@@ -210,12 +224,19 @@ export function GuidanceCommitmentsMatrix({ initialCommitments }: GuidanceCommit
                         <div
                           style={{
                             fontSize: "11px",
-                            color: c.actual_quality_status === "source" ? "#1b5e20" : "var(--muted, #52675d)",
+                            color:
+                              c.actual_quality_status === "provisional"
+                                ? "#1b5e20"
+                                : c.actual_quality_status === "verified"
+                                ? "#0d47a1"
+                                : "var(--muted, #52675d)",
                           }}
                         >
-                          {c.actual_quality_status === "source"
-                            ? `Oficial auditado (${c.actual_reference_period ?? "recente"})`
-                            : `Demonstração técnica (${c.actual_quality_status ?? "sintética"})`}
+                          {c.actual_quality_status === "provisional"
+                            ? `Captura provisória da origem (${c.actual_reference_period ?? "período recente"})`
+                            : c.actual_quality_status === "verified"
+                            ? `Oficial auditado (${c.actual_reference_period ?? "período recente"})`
+                            : `Demonstração sintética (${c.actual_reference_period ?? "fixture"})`}
                         </div>
                       </div>
                     ) : (
@@ -224,7 +245,7 @@ export function GuidanceCommitmentsMatrix({ initialCommitments }: GuidanceCommit
                           Aguardando observação verificada
                         </span>
                         <div style={{ fontSize: "10.5px", color: "var(--muted, #52675d)", marginTop: "2px" }}>
-                          Sem captura oficial auditada
+                          Sem captura da série vinculada
                         </div>
                       </div>
                     )}
