@@ -1,3 +1,6 @@
+import { DynamicSimulationSection } from "./components/DynamicSimulationSection";
+import { InstitutionalMatrix, type InstitutionalActor } from "./components/InstitutionalMatrix";
+
 export const dynamic = "force-dynamic";
 type Observation = {
   indicator_id: string;
@@ -59,17 +62,71 @@ const assumptionLabels: Record<string, string> = {
 };
 const fmt = (value: number) =>
   new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(value);
+
+const fallbackInstitutions: InstitutionalActor[] = [
+  {
+    actor_id: "EXEC",
+    name: "Poder Executivo Federal",
+    sphere: "federal",
+    legal_framework: "Art. 84 e 165 da CF/88",
+    description: "Formulação e execução de políticas públicas, gestão orçamentária e administração financeira da União.",
+  },
+  {
+    actor_id: "LEG",
+    name: "Poder Legislativo (Congresso Nacional)",
+    sphere: "federal",
+    legal_framework: "Art. 48, 49 e 166 da CF/88",
+    description: "Aprovação de leis orçamentárias (PPA, LDO, LOA), reformas tributárias e fiscalização financeira.",
+  },
+  {
+    actor_id: "JUD",
+    name: "Poder Judiciário",
+    sphere: "federal",
+    legal_framework: "Art. 92 e 100 da CF/88",
+    description: "Controle jurisdicional e de constitucionalidade das normas fiscais e ordenação de precatórios.",
+  },
+  {
+    actor_id: "BCB",
+    name: "Banco Central do Brasil",
+    sphere: "independent",
+    legal_framework: "Lei Complementar nº 179/2021",
+    description: "Execução da política monetária, controle da inflação conforme meta, regulação financeira e estabilidade cambial.",
+  },
+  {
+    actor_id: "TCU",
+    name: "Tribunal de Contas da União",
+    sphere: "independent",
+    legal_framework: "Art. 70 a 73 da CF/88",
+    description: "Controle externo e fiscalização contábil, financeira, orçamentária, operacional e patrimonial da União.",
+  },
+  {
+    actor_id: "SUB",
+    name: "Entes Subnacionais (Estados e Municípios)",
+    sphere: "subnational",
+    legal_framework: "Art. 18, 157-159 da CF/88 e LRF (LC 101/2000)",
+    description: "Execução descentralizada de serviços essenciais e cumprimento de metas e limites fiscais federativos.",
+  },
+  {
+    actor_id: "SOC",
+    name: "Sociedade Civil e Setor Produtivo",
+    sphere: "civil_society",
+    legal_framework: "Art. 1º, parágrafo único da CF/88",
+    description: "Participação social, debate público, produção econômica e destinatária final das políticas públicas.",
+  },
+];
+
 export default async function Page({
   searchParams,
 }: {
   searchParams: Promise<{ mode?: string }>;
 }) {
   const mode = (await searchParams).mode === "fixture" ? "fixture" : "source";
-  const [catalog, observations, scenarios, alerts] = await Promise.all([
+  const [catalog, observations, scenarios, alerts, institutions] = await Promise.all([
     load<Catalog>("indicators", mode),
     load<Observation[]>("observations", mode),
     load<Scenario[]>("scenarios", mode),
     load<Alert[]>("alerts", mode),
+    load<InstitutionalActor[]>("institutions", mode),
   ]);
   const latest = new Map<string, Observation>();
   for (const item of observations?.data || []) {
@@ -79,6 +136,8 @@ export default async function Page({
     )
       latest.set(item.indicator_id, item);
   }
+  const debtObs = latest.get("br.debt.gross_pct_gdp");
+  const baseDebtValue = debtObs ? Number(debtObs.value) : 78.5;
   return (
     <main>
       <header>
@@ -256,6 +315,7 @@ export default async function Page({
           </p>
         )}
       </section>
+      <DynamicSimulationSection initialBaseDebt={baseDebtValue} />
       <section>
         <div className="section-title">
           <h2>Revisão humana</h2>
@@ -278,6 +338,13 @@ export default async function Page({
           <p className="empty">Nenhum alerta material registrado neste modo.</p>
         )}
       </section>
+      <InstitutionalMatrix
+        institutions={
+          institutions?.data && institutions.data.length > 0
+            ? institutions.data
+            : fallbackInstitutions
+        }
+      />
       <section>
         <h2>Cobertura do observatório</h2>
         <div className="domains">
