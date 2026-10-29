@@ -41,6 +41,7 @@ def test_migration_004_sql_file_exists_and_contains_expected_tables():
     assert "comm-debt-stabilization-2030" in content
     assert "comm-inflation-convergence-2030" in content
     assert "comm-investment-rate-2030" in content
+    assert "br.ipca.12m" in content, "Annual inflation commitment must bind to annual indicator (br.ipca.12m)"
 
     # Verify no automatic validation or ratification
     assert "validated" not in content.lower() or "not_validated" in content.lower()
@@ -88,6 +89,10 @@ def test_guidance_commitments_separation_and_governance(db):
         """).fetchall()
 
         assert len(commitments) >= 3, "Guidance must contain at least 3 commitments"
+
+        inflation_comm = next(c for c in commitments if c[0] == "comm-inflation-convergence-2030")
+        assert inflation_comm[2] == "br.ipca.12m", "Annual inflation commitment must bind to an annual inflation series (br.ipca.12m)"
+        assert inflation_comm[2] != "br.ipca.monthly", "Cannot bind annual inflation target to monthly variation indicator"
 
         for c in commitments:
             comm_id, prop_id, indicator, name, horizon, status, b_period, b_val, t_val, f_val, a_val, unit, review_req = c

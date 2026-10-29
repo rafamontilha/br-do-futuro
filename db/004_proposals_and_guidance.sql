@@ -112,7 +112,7 @@ VALUES
         '["Congresso Nacional", "Comitê Gestor do IBS", "Secretaria Especial da Receita Federal do Brasil"]'::jsonb,
         'Manutenção da guerra fiscal interestadual, insegurança jurídica crônica para novas plantas industriais e desindustrialização precoce.',
         'Simulações de equilíbrio geral computável IPEA/UFMG (Appy et al., 2020; Pires, 2023) estimando incremento de 12% a 20% no PIB potencial em 15 anos.',
-        'br.ipca.monthly'
+        'br.ipca.12m'
     )
 ON CONFLICT (id) DO NOTHING;
 
@@ -143,8 +143,8 @@ VALUES
     (
         'comm-inflation-convergence-2030',
         'prop-tax-reform-neutrality',
-        'br.ipca.monthly',
-        'Convergência Contínua da Inflação (IPCA) ao Centro da Meta',
+        'br.ipca.12m',
+        'Convergência da Inflação Anual (IPCA 12m) ao Centro da Meta',
         2030,
         'experimental_hypothesis',
         '2025-12',
@@ -153,7 +153,7 @@ VALUES
         3.8000,
         4.2000,
         '% a.a.',
-        'Meta contínua de 3,00% com intervalo de tolerância de 1,50 p.p. fixada pelo CMN; modelo projeta pressão residual no curto prazo.',
+        'Meta contínua de 3,00% com intervalo de tolerância de 1,50 p.p. fixada pelo CMN para o IPCA acumulado em 12 meses; modelo projeta pressão residual no curto prazo.',
         'annual',
         true
     ),

@@ -56,6 +56,7 @@ async function load<T>(
 }
 const units: Record<string, string> = {
   percent_month: "% no mês",
+  percent_year: "% ao ano",
   percent_day: "% ao dia",
   percent_gdp: "% do PIB",
 };

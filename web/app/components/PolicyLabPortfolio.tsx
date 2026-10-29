@@ -54,7 +54,7 @@ const defaultProposals: PublicProposal[] = [
     responsible_actors: ["Congresso Nacional", "Comitê Gestor do IBS", "Secretaria Especial da Receita Federal do Brasil"],
     counterfactual_summary: "Manutenção da guerra fiscal interestadual, insegurança jurídica crônica para novas plantas industriais e desindustrialização precoce.",
     empirical_evidence: "Simulações de equilíbrio geral computável IPEA/UFMG (Appy et al., 2020; Pires, 2023) estimando incremento de 12% a 20% no PIB potencial em 15 anos.",
-    target_indicator_id: "br.ipca.monthly",
+    target_indicator_id: "br.ipca.12m",
   },
 ];
 

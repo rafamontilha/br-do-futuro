@@ -9,7 +9,7 @@
    - `prop-infra-investment-acceleration` (Aceleração do Investimento em Infraestrutura via PPI)
    - `prop-tax-reform-neutrality` (Simplificação Tributária, Neutralidade e Fim da Cumulatividade)
    com dados reais de custo estimado, fontes de financiamento, competências legais e referências de evidências.
-1.3. Inserir sementes dos compromissos canônicos de Guidance 2027–2030 vinculados aos indicadores da base (`br.debt.gross_pct_gdp`, `br.ipca.monthly`, taxa de investimento), associando valores de baseline histórico auditado e metas com status `experimental_hypothesis`.
+1.3. Inserir sementes dos compromissos canônicos de Guidance 2027–2030 vinculados aos indicadores da base (`br.debt.gross_pct_gdp`, `br.ipca.12m`, taxa de investimento), associando valores de baseline histórico auditado e metas com status `experimental_hypothesis`.
 1.4. Inserir sementes de calibração de parâmetros fiscais (`fiscal_calibrations`) relacionando cenários base, otimista e adverso às hipóteses das propostas públicas.
 
 ### 2. Components / UI
