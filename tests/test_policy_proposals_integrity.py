@@ -115,6 +115,6 @@ def test_fiscal_calibrations_integrity(db):
         assert len(calibrations) >= 4, "Must have at least 4 fiscal calibrations"
         for cal in calibrations:
             cal_id, scenario, prop_id, elast, spread, shift, notes = cal
-            assert scenario in ("baseline", "optimistic", "pessimistic")
+            assert scenario in ("continuity", "alternative", "adverse"), f"Scenario {scenario} must match canonical scenario engine IDs"
             assert float(elast) > 0, "Elasticity must be positive"
             assert notes and len(notes) > 10, "Calibrations require technical notes"

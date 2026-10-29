@@ -48,7 +48,7 @@ CREATE INDEX IF NOT EXISTS guidance_commitments_horizon ON guidance_commitments(
 
 CREATE TABLE IF NOT EXISTS fiscal_calibrations (
     id text PRIMARY KEY,
-    scenario_id text NOT NULL,
+    scenario_id text NOT NULL CHECK (scenario_id IN ('continuity', 'alternative', 'adverse')),
     proposal_id text REFERENCES public_proposals(id),
     elasticity_revenue_gdp numeric(6,3) NOT NULL,
     real_interest_rate_spread numeric(6,3) NOT NULL,
@@ -183,8 +183,8 @@ INSERT INTO fiscal_calibrations (
 )
 VALUES
     (
-        'calib-baseline-continuation',
-        'baseline',
+        'calib-continuity-inertial',
+        'continuity',
         NULL,
         1.050,
         6.200,
@@ -193,30 +193,39 @@ VALUES
     ),
     (
         'calib-mandatory-spending-package',
-        'optimistic',
+        'alternative',
         'prop-fiscal-mandatory-spending',
         1.080,
         4.800,
         1.200,
-        'Calibração com contenção de gastos obrigatórios gerando melhora estrutural de 1,2% do PIB no resultado primário e queda no prêmio de risco.'
+        'Calibração no cenário alternativo com contenção de gastos obrigatórios gerando melhora estrutural de 1,2% do PIB no resultado primário e queda no prêmio de risco.'
     ),
     (
         'calib-infra-investment-boost',
-        'optimistic',
+        'alternative',
         'prop-infra-investment-acceleration',
         1.150,
         5.100,
         0.300,
-        'Aceleração do investimento logístico elevando a elasticidade de arrecadação por ganho de produtividade.'
+        'Aceleração do investimento logístico no cenário alternativo elevando a elasticidade de arrecadação por ganho de produtividade.'
     ),
     (
         'calib-tax-reform-efficiency',
-        'baseline',
+        'continuity',
         'prop-tax-reform-neutrality',
         1.100,
         5.500,
         0.100,
-        'Neutralidade da carga tributária no curto prazo com ganho gradual de eficiência alocativa a partir do 3º ano.'
+        'Neutralidade da carga tributária no curto prazo com ganho gradual de eficiência alocativa a partir do 3º ano no cenário de continuidade.'
+    ),
+    (
+        'calib-adverse-stress',
+        'adverse',
+        NULL,
+        0.950,
+        8.000,
+        -1.000,
+        'Cenário fiscal adverso com estresse de juros da dívida e retração na elasticidade de arrecadação.'
     )
 ON CONFLICT (id) DO NOTHING;
 

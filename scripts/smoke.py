@@ -111,6 +111,7 @@ assert len(historical_proposals) == 0, "Proposals cannot appear before creation 
 
 calibrations = get('/v1/scenarios/calibrations')['data']
 assert len(calibrations) >= 4
+assert all(c['scenario_id'] in ('continuity', 'alternative', 'adverse') for c in calibrations)
 
 real=get('/v1/observations')['data']
 assert all(o['quality_status']=='provisional' for o in real)
