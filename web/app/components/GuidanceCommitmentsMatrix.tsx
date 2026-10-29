@@ -107,7 +107,7 @@ export function GuidanceCommitmentsMatrix({ initialCommitments }: GuidanceCommit
 
       <p style={{ color: "var(--muted, #52675d)", fontSize: "14px", marginTop: "8px", marginBottom: "20px" }}>
         Separação metodológica rigorosa entre o ponto de partida ilustrativo (baseline experimental), a meta proposta para o mandato,
-        a projeção do modelo econômico e as observações apuradas. Atualizações de séries nunca apagam metas nem omitem desvios.
+        a projeção ilustrativa (forecast preliminar não validado) e as observações apuradas. Atualizações de séries nunca apagam metas nem omitem desvios.
       </p>
 
       <div
@@ -126,7 +126,7 @@ export function GuidanceCommitmentsMatrix({ initialCommitments }: GuidanceCommit
               <th style={{ padding: "14px 16px", fontWeight: 600 }}>Horizonte</th>
               <th style={{ padding: "14px 16px", fontWeight: 600 }}>Baseline (Ilustrativa)</th>
               <th style={{ padding: "14px 16px", fontWeight: 600 }}>Meta Proposta</th>
-              <th style={{ padding: "14px 16px", fontWeight: 600 }}>Projeção (Forecast)</th>
+              <th style={{ padding: "14px 16px", fontWeight: 600 }}>Projeção (Ilustrativa)</th>
               <th style={{ padding: "14px 16px", fontWeight: 600 }}>Observação Recente (Actual)</th>
               <th style={{ padding: "14px 16px", fontWeight: 600 }}>Desvio (Obs - Meta)</th>
               <th style={{ padding: "14px 16px", fontWeight: 600 }}>Governança</th>
@@ -209,7 +209,21 @@ export function GuidanceCommitmentsMatrix({ initialCommitments }: GuidanceCommit
                     {fVal !== null ? (
                       <div>
                         <div style={{ fontWeight: 600 }}>{fVal.toFixed(1)} {c.unit}</div>
-                        <div style={{ fontSize: "11px", color: "var(--muted, #52675d)" }}>Cenário Base</div>
+                        <div style={{ fontSize: "11px", color: "var(--muted, #52675d)" }}>Simulação Ilustrativa</div>
+                        <span
+                          style={{
+                            display: "inline-block",
+                            marginTop: "4px",
+                            fontSize: "10px",
+                            background: "#f0f4f1",
+                            color: "#52675d",
+                            border: "1px solid #d5dccf",
+                            padding: "1px 6px",
+                            borderRadius: "3px",
+                          }}
+                        >
+                          Ilustrativa
+                        </span>
                       </div>
                     ) : (
                       <span style={{ color: "var(--muted, #52675d)" }}>—</span>
