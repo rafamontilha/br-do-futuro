@@ -12,5 +12,6 @@ def db():
         assert conn.execute("SELECT current_database()").fetchone()[0] == "bdf_test", "Refuse to reset non-test database"
         conn.execute(Path("db/001_foundation.sql").read_text())
         conn.execute(Path("db/002_dynamic_and_institutional.sql").read_text())
-        conn.execute("TRUNCATE alert,scenario_run,outbox,observation,vintage,ingestion_run,raw_capture,dynamic_simulations CASCADE")
+        conn.execute(Path("db/003_source_schedules_and_replay.sql").read_text())
+        conn.execute("TRUNCATE alert,scenario_run,outbox,observation,vintage,ingestion_run,raw_capture,dynamic_simulations,outbox_replay_audit CASCADE")
     return dsn

@@ -29,6 +29,15 @@ def process_event(conn, event):
                 (str(exc), sim_id))
         return
 
+    if event["event_type"] == "OutboxReplayRequested":
+        from .freshness import execute_outbox_replay
+        reason = p.get("reason", "Operator replay")
+        user = p.get("triggered_by", "operator")
+        filter_ind = p.get("filter_indicator_id")
+        filter_type = p.get("filter_event_type")
+        execute_outbox_replay(conn, reason=reason, triggered_by=user, filter_indicator_id=filter_ind, filter_event_type=filter_type)
+        return
+
     if event["event_type"] not in ("EconomicIndicatorUpdated", "HistoricalSeriesRevised"):
         return
     for scenario_id in DEPENDENCIES.get(p["indicator_id"], []):
@@ -85,4 +94,9 @@ def drain(dsn, limit=1000):
                         status=CASE WHEN attempts+1>=3 THEN 'dead_letter' ELSE 'pending' END WHERE id=%s""",
                         (str(exc), event["id"]))
                     failed += 1
+        try:
+            from .freshness import refresh_source_schedules
+            refresh_source_schedules(conn)
+        except Exception:
+            pass
     return dict(processed=processed, failed=failed)

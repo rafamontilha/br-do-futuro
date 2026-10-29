@@ -1,5 +1,6 @@
 import { DynamicSimulationSection } from "./components/DynamicSimulationSection";
 import { InstitutionalMatrix, type InstitutionalActor } from "./components/InstitutionalMatrix";
+import { SourceFreshnessPanel, type SourceSchedule } from "./components/SourceFreshnessPanel";
 
 export const dynamic = "force-dynamic";
 type Observation = {
@@ -121,12 +122,13 @@ export default async function Page({
   searchParams: Promise<{ mode?: string }>;
 }) {
   const mode = (await searchParams).mode === "fixture" ? "fixture" : "source";
-  const [catalog, observations, scenarios, alerts, institutions] = await Promise.all([
+  const [catalog, observations, scenarios, alerts, institutions, sourcesHealth] = await Promise.all([
     load<Catalog>("indicators", mode),
     load<Observation[]>("observations", mode),
     load<Scenario[]>("scenarios", mode),
     load<Alert[]>("alerts", mode),
     load<InstitutionalActor[]>("institutions", mode),
+    load<SourceSchedule[]>("health/sources", mode),
   ]);
   const latest = new Map<string, Observation>();
   for (const item of observations?.data || []) {
@@ -338,6 +340,7 @@ export default async function Page({
           <p className="empty">Nenhum alerta material registrado neste modo.</p>
         )}
       </section>
+      <SourceFreshnessPanel initialSchedules={sourcesHealth?.data} />
       <InstitutionalMatrix
         institutions={
           institutions?.data && institutions.data.length > 0

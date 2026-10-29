@@ -107,6 +107,43 @@ paths:
         '200': {$ref: '#/components/responses/Envelope'}
         '404': {description: Simulação não encontrada}
         '503': {description: Consulta indisponível}
+  /v1/health/sources:
+    get:
+      summary: Status de conformidade de calendário e freshness das fontes
+      parameters:
+        - {$ref: '#/components/parameters/Mode'}
+        - {$ref: '#/components/parameters/AsOf'}
+      responses:
+        '200': {$ref: '#/components/responses/Envelope'}
+        '503': {description: Consulta indisponível}
+  /v1/admin/outbox/replay:
+    post:
+      summary: Disparo auditável de reprocessamento operacional de eventos da outbox
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: {type: string, example: "Reprocessamento após correção do conector IBGE"}
+                triggered_by: {type: string, example: "admin"}
+                filter_indicator_id: {type: string, example: "br.ipca.monthly"}
+                filter_event_type: {type: string, example: "EconomicIndicatorUpdated"}
+      responses:
+        '202': {description: Replay disparado e registrado em auditoria}
+        '400': {description: Justificativa ausente ou payload inválido}
+        '503': {description: Banco ou fila indisponível}
+  /v1/admin/outbox/replay/{id}:
+    get:
+      summary: Consulta o status de um replay operacional
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        '200': {$ref: '#/components/responses/Envelope'}
+        '404': {description: Replay não encontrado}
+        '503': {description: Banco indisponível}
 components:
   parameters:
     Mode:
