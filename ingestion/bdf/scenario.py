@@ -13,13 +13,41 @@ SCENARIOS = {
 DEPENDENCIES = {"br.debt.gross_pct_gdp": list(SCENARIOS)}
 
 
+def validate_assumptions(assumptions):
+    required = ("interest", "growth", "primary")
+    for key in required:
+        if key not in assumptions:
+            raise ValueError(f"Missing required fiscal assumption: {key}")
+    a = {}
+    for key in ("interest", "growth", "primary", "adjustment"):
+        val = assumptions.get(key, "0.00")
+        try:
+            dec = Decimal(str(val))
+        except Exception as exc:
+            raise ValueError(f"Invalid decimal for assumption {key}: {val}") from exc
+        if not dec.is_finite():
+            raise ValueError(f"Non-finite assumption {key}: {val}")
+        a[key] = dec
+    if a["growth"] <= Decimal("-1"):
+        raise ValueError("Growth rate must be strictly greater than -100%")
+    horizon = int(assumptions.get("horizon_years", 4))
+    if horizon < 1 or horizon > 20:
+        raise ValueError("Horizon years must be between 1 and 20")
+    return a, horizon
+
+
 def fiscal_path(debt_pct, assumptions, years=4):
-    debt = Decimal(str(debt_pct)) / 100
-    a = {key: Decimal(value) for key, value in assumptions.items()}
-    if not all(v.is_finite() for v in [debt, *a.values()]) or a["growth"] <= -1:
-        raise ValueError("Invalid fiscal assumptions")
+    try:
+        debt = Decimal(str(debt_pct)) / 100
+    except Exception as exc:
+        raise ValueError(f"Invalid base debt percentage: {debt_pct}") from exc
+    if not debt.is_finite() or debt < 0:
+        raise ValueError("Base debt percentage must be finite and non-negative")
+    a, horizon = validate_assumptions(assumptions)
+    if "horizon_years" not in assumptions:
+        horizon = int(years)
     result = []
-    for step in range(1, years + 1):
+    for step in range(1, horizon + 1):
         debt = (1 + a["interest"]) / (1 + a["growth"]) * debt - a["primary"] + a["adjustment"]
         result.append(dict(horizon_years=step, debt_pct_gdp=str(debt * 100)))
     return result

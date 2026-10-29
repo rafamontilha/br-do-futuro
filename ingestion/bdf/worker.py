@@ -12,6 +12,23 @@ from .scenario import DEPENDENCIES, SCENARIOS, MODEL_VERSION, fiscal_path, finge
 
 def process_event(conn, event):
     p = event["payload"]
+    if event["event_type"] == "DynamicSimulationRequested":
+        sim_id = p["simulation_id"]
+        base_debt = p["base_debt_pct"]
+        assumptions = p["assumptions"]
+        try:
+            trajectory = fiscal_path(base_debt, assumptions)
+            conn.execute("""UPDATE dynamic_simulations
+                SET results=%s, status='completed', error=NULL, completed_at=clock_timestamp()
+                WHERE simulation_id=%s""",
+                (Jsonb(trajectory), sim_id))
+        except (ValueError, ArithmeticError) as exc:
+            conn.execute("""UPDATE dynamic_simulations
+                SET error=%s, status='failed', completed_at=clock_timestamp()
+                WHERE simulation_id=%s""",
+                (str(exc), sim_id))
+        return
+
     if event["event_type"] not in ("EconomicIndicatorUpdated", "HistoricalSeriesRevised"):
         return
     for scenario_id in DEPENDENCIES.get(p["indicator_id"], []):

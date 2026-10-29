@@ -62,6 +62,51 @@ paths:
         '200': {$ref: '#/components/responses/Envelope'}
         '400': {description: Parâmetros inválidos}
         '503': {description: Consulta indisponível}
+  /v1/institutions:
+    get:
+      summary: Catálogo de atores e competências institucionais constitucionais
+      parameters:
+        - {$ref: '#/components/parameters/Mode'}
+        - {$ref: '#/components/parameters/AsOf'}
+      responses:
+        '200': {$ref: '#/components/responses/Envelope'}
+        '503': {description: Consulta indisponível}
+  /v1/simulations/fiscal:
+    post:
+      summary: Enfileira simulação com premissas dinâmicas da identidade contábil da dívida
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [base_debt_pct, assumptions]
+              properties:
+                base_debt_pct: {type: string, example: "78.50"}
+                assumptions:
+                  type: object
+                  required: [interest, growth, primary]
+                  properties:
+                    interest: {type: string, example: "0.105"}
+                    growth: {type: string, example: "0.045"}
+                    primary: {type: string, example: "0.010"}
+                    adjustment: {type: string, example: "0.000"}
+                    horizon_years: {type: integer, example: 4}
+      responses:
+        '202': {description: Simulação aceita e enfileirada para processamento assíncrono}
+        '400': {description: Parâmetros inválidos ou violação de restrições de limites}
+        '503': {description: Banco ou fila indisponível}
+  /v1/simulations/fiscal/{id}:
+    get:
+      summary: Consulta o status e resultados de uma simulação fiscal dinâmica
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - {$ref: '#/components/parameters/Mode'}
+        - {$ref: '#/components/parameters/AsOf'}
+      responses:
+        '200': {$ref: '#/components/responses/Envelope'}
+        '404': {description: Simulação não encontrada}
+        '503': {description: Consulta indisponível}
 components:
   parameters:
     Mode:
