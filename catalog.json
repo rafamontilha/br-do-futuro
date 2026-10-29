@@ -185,7 +185,7 @@
     {
       "name": "Taxa de câmbio USD/BRL (PTAX venda)",
       "domain": 6,
-      "series": 10813,
+      "series": 1,
       "unit": "brl_per_usd",
       "frequency": "daily",
       "origin": "BCB/SGS",
@@ -198,7 +198,7 @@
       "license_status": "pending_review",
       "calendar_status": "pending_validation",
       "source_status": "candidate",
-      "source_uri": "https://api.bcb.gov.br/dados/serie/bcdata.sgs.10813/dados",
+      "source_uri": "https://api.bcb.gov.br/dados/serie/bcdata.sgs.1/dados",
       "quality_status": "unavailable"
     },
     {

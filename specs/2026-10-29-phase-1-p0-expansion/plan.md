@@ -4,7 +4,7 @@
 
 Expandir o conjunto de indicadores econômicos P0 com a introdução de três séries fundamentais para a análise macroeconômica brasileira:
 1. PIB Trimestral (IBGE SIDRA 5932).
-2. Taxa de Câmbio USD/BRL PTAX (BCB SGS 10813).
+2. Taxa de Câmbio USD/BRL PTAX (BCB SGS 1).
 3. Taxa de Desocupação PNAD Contínua (IBGE SIDRA 4099).
 
 A implementação abrange o ciclo de vida completo: registro no catálogo com metadados de domínio e periodicidade, conectores de ingestão com captura de raw payload SHA-256 e quarentena, persistência bitemporal idempotente em PostgreSQL, exposição em endpoints da API Go com suporte a filtros e paginação, e integração na interface de usuário Next.js com fallback transparente de fixtures para ambientes offline.
@@ -49,7 +49,7 @@ A implementação abrange o ciclo de vida completo: registro no catálogo com me
 ### Phase 2: Ingestion Connectors & Contracts (Python)
 - **Files:**
   - `ingestion/bdf/sources/ibge.py` (ou expansão de conectores IBGE SIDRA para PIB e PNADC).
-  - `ingestion/bdf/sources/bcb.py` (expansão para suportar a série PTAX 10813).
+  - `ingestion/bdf/sources/bcb.py` (expansão para suportar a série PTAX 1).
   - `ingestion/bdf/contracts.py` (modelos Pydantic para validação das novas respostas).
   - `ingestion/bdf/pipeline.py` (registro e execução das novas tarefas de ingestão).
   - `tests/fixtures/ibge_pib_sample.json`, `tests/fixtures/bcb_ptax_sample.json`, `tests/fixtures/ibge_pnadc_sample.json`.

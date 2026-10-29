@@ -39,7 +39,7 @@ VALUES
         0.00,
         0,
         false,
-        '{"sgs_code": 10813, "agency": "BCB", "notes": "Taxa de câmbio - Livre - Dólar americano (venda) - diário PTAX"}'::jsonb
+        '{"sgs_code": 1, "agency": "BCB", "notes": "Taxa de câmbio - Livre - Dólar americano (venda) - diário PTAX"}'::jsonb
     ),
     (
         'sched-unemployment-rate',

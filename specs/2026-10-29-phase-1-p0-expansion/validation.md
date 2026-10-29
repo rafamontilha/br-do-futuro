@@ -16,7 +16,7 @@
 | Behaviour | Test type | Expected result |
 |---|---|---|
 | Ingestão PIB SIDRA (Tabela 5932) | Unit / Integration (Python) | Extrai período trimestral normalizado para `YYYY-MM-01`, persiste raw payload SHA-256 e gera observação com unidade `percent_yoy` |
-| Ingestão Câmbio PTAX (Série 10813) | Unit / Integration (Python) | Extrai cotação diária/fechamento com precisão decimal adequada e unidade `brl_per_usd` |
+| Ingestão Câmbio PTAX (Série 1) | Unit / Integration (Python) | Extrai cotação diária/fechamento com precisão decimal adequada e unidade `brl_per_usd` |
 | Ingestão PNAD Contínua (Tabela 4099) | Unit / Integration (Python) | Extrai taxa de desocupação móvel com ancoragem no primeiro dia do período de referência e unidade `percent` |
 | Quarentena de Payload Inválido | Unit (Python) | Resposta truncada ou fora de contrato é interceptada e registrada em `quarantine_records` sem propagação |
 | Consulta de Indicadores na API Go | Integration (Go) | `GET /v1/indicators` retorna os 6 indicadores P0 cadastrados |

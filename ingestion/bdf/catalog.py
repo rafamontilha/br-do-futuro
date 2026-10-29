@@ -16,7 +16,7 @@ INDICATORS = {
                                  unit="percent_gdp", frequency="monthly", origin="BCB/SGS", revisable=True),
     "br.gdp.quarterly_yoy": dict(name="PIB trimestral a preços de mercado (variação % interanual)", domain=1,
                                 series=5932, unit="percent_yoy", frequency="quarterly", origin="IBGE/SIDRA", revisable=True),
-    "br.fx.usd_brl.ptax": dict(name="Taxa de câmbio USD/BRL (PTAX venda)", domain=6, series=10813,
+    "br.fx.usd_brl.ptax": dict(name="Taxa de câmbio USD/BRL (PTAX venda)", domain=6, series=1,
                                unit="brl_per_usd", frequency="daily", origin="BCB/SGS", revisable=False),
     "br.labor.unemployment_rate": dict(name="Taxa de desocupação (PNAD Contínua)", domain=9, series=4099,
                                       unit="percent", frequency="quarterly", origin="IBGE/SIDRA", revisable=True),

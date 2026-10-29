@@ -88,19 +88,19 @@ def main():
                                               source="IBGE_SIDRA", checked_at=datetime.now().astimezone().isoformat())))
                 raise SystemExit(1)
             result = ingest(dsn, args.indicator, content, url, mode="source")
-        elif use_ibge and args.indicator == "br.gdp.quarterly_yoy":
-            from .sources.ibge import fetch_sidra_gdp
+        elif use_ibge and args.indicator in ("br.gdp.quarterly_yoy", "br.labor.unemployment_rate"):
+            start_q = (args.start.month - 1) // 3 + 1
+            end_q = (args.end.month - 1) // 3 + 1
+            start_p = f"{args.start.year}{start_q:02d}"
+            end_p = f"{args.end.year}{end_q:02d}"
+            period_arg = f"{start_p}-{end_p}" if start_p != end_p else start_p
             try:
-                content, url = fetch_sidra_gdp(periods="all", session=session)
-            except requests.RequestException:
-                logging.error(json.dumps(dict(event="source_unavailable", indicator_id=args.indicator,
-                                              source="IBGE_SIDRA", checked_at=datetime.now().astimezone().isoformat())))
-                raise SystemExit(1)
-            result = ingest(dsn, args.indicator, content, url, mode="source")
-        elif use_ibge and args.indicator == "br.labor.unemployment_rate":
-            from .sources.ibge import fetch_sidra_unemployment
-            try:
-                content, url = fetch_sidra_unemployment(periods="all", session=session)
+                if args.indicator == "br.gdp.quarterly_yoy":
+                    from .sources.ibge import fetch_sidra_gdp
+                    content, url = fetch_sidra_gdp(periods=period_arg, session=session)
+                else:
+                    from .sources.ibge import fetch_sidra_unemployment
+                    content, url = fetch_sidra_unemployment(periods=period_arg, session=session)
             except requests.RequestException:
                 logging.error(json.dumps(dict(event="source_unavailable", indicator_id=args.indicator,
                                               source="IBGE_SIDRA", checked_at=datetime.now().astimezone().isoformat())))

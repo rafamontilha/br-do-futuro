@@ -700,8 +700,12 @@ func main() {
 		os.Exit(1)
 	}
 	a := &API{db: pool, catalog: catalog, rateLimiter: NewRateLimiter()}
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
 	server := &http.Server{
-		Addr:              ":8080",
+		Addr:              ":" + port,
 		Handler:           http.HandlerFunc(a.handle),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,

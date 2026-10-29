@@ -5,7 +5,7 @@
 **In scope:**
 - Catálogo: Registrar 3 novas séries canônicas de alta relevância (P0) no catálogo de indicadores:
   1. `IBGE_PIB_TRIMESTRAL_VAR` (IBGE SIDRA Tabela 5932 - PIB a preços de mercado, variação % em relação ao mesmo período do ano anterior).
-  2. `BCB_PTAX_USD_BRL` (BCB SGS série 10813 / Olinda - Câmbio comercial USD/BRL venda, fechamento e série temporal).
+  2. `BCB_PTAX_USD_BRL` (BCB SGS série 1 / Olinda - Câmbio comercial USD/BRL venda, fechamento e série temporal).
   3. `IBGE_PNADC_DESOCUPACAO` (IBGE SIDRA Tabela 4099 - Taxa de desocupação da PNAD Contínua, trimestral móvel, %).
 - Ingestão Python:
   - Módulos conectores com validação de contrato para IBGE SIDRA (API REST) e BCB SGS/Olinda.
@@ -46,7 +46,7 @@
 |----------|--------|-----------|
 | Ancoragem Temporal Trimestral | 1º dia do trimestre (ex: Q1 = `YYYY-01-01`, Q2 = `YYYY-04-01`) | Garante ordenação uniforme, consultas bitemporais consistentes no Postgres e interoperabilidade com séries mensais e anuais sem necessidade de novos tipos de dados no SQL |
 | Conector IBGE SIDRA | Conector REST para a API SIDRA do IBGE com fallback de fixtures | Segue o padrão de conformidade e integridade dos conectores BCB existentes, preservando o JSON bruto e isolando erros de rede |
-| Conector BCB PTAX | Conector para SGS 10813 (ou Olinda) com extração de cotação de venda | Série canônica e amplamente referenciada no mercado para taxas de câmbio nominais de fechamento |
+| Conector BCB PTAX | Conector para SGS 1 (ou Olinda) com extração de cotação de venda | Série canônica e amplamente referenciada no mercado para taxas de câmbio nominais de fechamento |
 | Validação e Quarentena | Pydantic contracts com verificação de tipo, faixas razoáveis e consistência | Impede inserção de observações corrompidas ou alterações silenciosas de formato da fonte |
 | Visualização no Frontend | Cards dinâmicos no Observatório com badge de periodicidade e proveniência | Oferece transparência imediata ao usuário mantendo coerência com o design system existente |
 
