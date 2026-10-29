@@ -1,0 +1,47 @@
+[
+  {
+    "NC": "Nível Territorial (Código)",
+    "NN": "Nível Territorial",
+    "MC": "Unidade de Medida (Código)",
+    "MN": "Unidade de Medida",
+    "V": "Valor",
+    "D1C": "Variável (Código)",
+    "D1N": "Variável",
+    "D2C": "Trimestre (Código)",
+    "D2N": "Trimestre",
+    "D3C": "Setores e subsetores (Código)",
+    "D3N": "Setores e subsetores",
+    "D4C": "Brasil (Código)",
+    "D4N": "Brasil"
+  },
+  {
+    "NC": "1",
+    "NN": "Brasil",
+    "MC": "2",
+    "MN": "%",
+    "V": "2.5",
+    "D1C": "6561",
+    "D1N": "Taxa trimestral (em relação ao mesmo período do ano anterior)",
+    "D2C": "202404",
+    "D2N": "4º trimestre 2024",
+    "D3C": "90707",
+    "D3N": "PIB a preços de mercado",
+    "D4C": "1",
+    "D4N": "Brasil"
+  },
+  {
+    "NC": "1",
+    "NN": "Brasil",
+    "MC": "2",
+    "MN": "%",
+    "V": "2.9",
+    "D1C": "6561",
+    "D1N": "Taxa trimestral (em relação ao mesmo período do ano anterior)",
+    "D2C": "202501",
+    "D2N": "1º trimestre 2025",
+    "D3C": "90707",
+    "D3N": "PIB a preços de mercado",
+    "D4C": "1",
+    "D4N": "Brasil"
+  }
+]

@@ -53,12 +53,22 @@ sim_get = get(f'/v1/simulations/fiscal/{sim_id}')
 assert sim_get['data']['simulation_id'] == sim_id
 assert sim_get['data']['base_debt_pct'] == 78.5
 
+# Verificações de Indicadores P0
+indicators_data = get('/v1/indicators')['data']['indicators']
+p0_ids = {i['indicator_id'] for i in indicators_data}
+assert 'br.gdp.quarterly_yoy' in p0_ids
+assert 'br.fx.usd_brl.ptax' in p0_ids
+assert 'br.labor.unemployment_rate' in p0_ids
+
 # Verificações do Incremento 02: Saúde Operacional, Agendamentos e Replay
 sources_health = get('/v1/health/sources')['data']
-assert len(sources_health) >= 3
+assert len(sources_health) >= 6
 ipca_sched = next(s for s in sources_health if s['indicator_id'] == 'br.ipca.monthly')
 assert ipca_sched['primary_source'] == 'IBGE_SIDRA'
 assert ipca_sched['fallback_source'] == 'BCB_SGS'
+assert any(s['indicator_id'] == 'br.gdp.quarterly_yoy' and s['frequency'] == 'quarterly' for s in sources_health)
+assert any(s['indicator_id'] == 'br.fx.usd_brl.ptax' and s['frequency'] == 'daily' for s in sources_health)
+assert any(s['indicator_id'] == 'br.labor.unemployment_rate' and s['frequency'] == 'quarterly' for s in sources_health)
 
 # Replay sem autenticação: rejeitado com 401
 unauth_replay = requests.post(base+'/v1/admin/outbox/replay', json={'reason': 'teste'}, timeout=10)

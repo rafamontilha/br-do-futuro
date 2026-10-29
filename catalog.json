@@ -6,7 +6,7 @@
       "name": "Crescimento e PIB",
       "owner_role": "Data Steward",
       "owner_assignment": "pending",
-      "coverage": "planned"
+      "coverage": "pilot"
     },
     {
       "id": 2,
@@ -41,7 +41,7 @@
       "name": "Câmbio e setor externo",
       "owner_role": "Data Steward",
       "owner_assignment": "pending",
-      "coverage": "planned"
+      "coverage": "pilot"
     },
     {
       "id": 7,
@@ -62,7 +62,7 @@
       "name": "Trabalho",
       "owner_role": "Data Steward",
       "owner_assignment": "pending",
-      "coverage": "planned"
+      "coverage": "pilot"
     },
     {
       "id": 10,
@@ -161,6 +161,63 @@
       "calendar_status": "pending_validation",
       "source_status": "candidate",
       "source_uri": "https://api.bcb.gov.br/dados/serie/bcdata.sgs.13762/dados",
+      "quality_status": "unavailable"
+    },
+    {
+      "name": "PIB trimestral a preços de mercado (variação % interanual)",
+      "domain": 1,
+      "series": 5932,
+      "unit": "percent_yoy",
+      "frequency": "quarterly",
+      "origin": "IBGE/SIDRA",
+      "revisable": true,
+      "indicator_id": "br.gdp.quarterly_yoy",
+      "geography": "BR",
+      "adjustment": "non-seasonally-adjusted",
+      "owner_role": "Data Steward",
+      "methodology_version": "sidra-contract-v1",
+      "license_status": "pending_review",
+      "calendar_status": "pending_validation",
+      "source_status": "candidate",
+      "source_uri": "https://apisidra.ibge.gov.br/values/t/5932",
+      "quality_status": "unavailable"
+    },
+    {
+      "name": "Taxa de câmbio USD/BRL (PTAX venda)",
+      "domain": 6,
+      "series": 10813,
+      "unit": "brl_per_usd",
+      "frequency": "daily",
+      "origin": "BCB/SGS",
+      "revisable": false,
+      "indicator_id": "br.fx.usd_brl.ptax",
+      "geography": "BR",
+      "adjustment": "non-seasonally-adjusted",
+      "owner_role": "Data Steward",
+      "methodology_version": "sgs-contract-v1",
+      "license_status": "pending_review",
+      "calendar_status": "pending_validation",
+      "source_status": "candidate",
+      "source_uri": "https://api.bcb.gov.br/dados/serie/bcdata.sgs.10813/dados",
+      "quality_status": "unavailable"
+    },
+    {
+      "name": "Taxa de desocupação (PNAD Contínua)",
+      "domain": 9,
+      "series": 4099,
+      "unit": "percent",
+      "frequency": "quarterly",
+      "origin": "IBGE/SIDRA",
+      "revisable": true,
+      "indicator_id": "br.labor.unemployment_rate",
+      "geography": "BR",
+      "adjustment": "non-seasonally-adjusted",
+      "owner_role": "Data Steward",
+      "methodology_version": "sidra-contract-v1",
+      "license_status": "pending_review",
+      "calendar_status": "pending_validation",
+      "source_status": "candidate",
+      "source_uri": "https://apisidra.ibge.gov.br/values/t/4099",
       "quality_status": "unavailable"
     }
   ]

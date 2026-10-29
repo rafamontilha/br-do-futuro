@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 )
@@ -298,4 +299,45 @@ func TestCanonicalGenesisHash(t *testing.T) {
 	t.Logf("Go JSON: %s", string(bytes))
 	h := computePayloadHash(m)
 	t.Logf("Go Hash: %s", h)
+}
+
+func TestIndicatorsIncludesAllP0Series(t *testing.T) {
+	catalogBytes, err := os.ReadFile("../../catalog.json")
+	if err != nil {
+		t.Fatalf("failed to read catalog.json: %v", err)
+	}
+	a := &API{catalog: catalogBytes}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/v1/indicators", nil)
+	a.handle(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var resp struct {
+		Data struct {
+			Indicators []struct {
+				IndicatorID string `json:"indicator_id"`
+			} `json:"indicators"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	ids := make(map[string]bool)
+	for _, ind := range resp.Data.Indicators {
+		ids[ind.IndicatorID] = true
+	}
+	expected := []string{
+		"br.ipca.monthly",
+		"br.selic.daily",
+		"br.debt.gross_pct_gdp",
+		"br.gdp.quarterly_yoy",
+		"br.fx.usd_brl.ptax",
+		"br.labor.unemployment_rate",
+	}
+	for _, exp := range expected {
+		if !ids[exp] {
+			t.Errorf("missing expected indicator: %s", exp)
+		}
+	}
 }

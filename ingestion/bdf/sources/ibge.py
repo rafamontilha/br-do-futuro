@@ -15,9 +15,10 @@ class IBGEContractError(ValueError):
     pass
 
 
-def parse_ibge_ipca(body: bytes | str) -> list[tuple[date, Decimal]]:
-    """Parse and validate IPCA observations from IBGE SIDRA or Agregados API.
+def parse_ibge_sidra(body: bytes | str, frequency: str = "monthly") -> list[tuple[date, Decimal]]:
+    """Parse and validate observations from IBGE SIDRA or Agregados API.
 
+    frequency can be 'monthly' (YYYYMM) or 'quarterly' (YYYY0Q).
     Returns a sorted list of (reference_period, Decimal(value)) tuples where
     reference_period is date(YYYY, MM, 1).
     """
@@ -54,12 +55,19 @@ def parse_ibge_ipca(body: bytes | str) -> list[tuple[date, Decimal]]:
             val_str = row.get("V")
 
             if not period_code or len(period_code) != 6 or not period_code.isdigit():
-                raise IBGEContractError(f"Invalid SIDRA monthly period format: {period_code}")
+                raise IBGEContractError(f"Invalid SIDRA period format: {period_code}")
 
             year = int(period_code[:4])
-            month = int(period_code[4:6])
-            if month < 1 or month > 12:
-                raise IBGEContractError(f"Invalid month in period: {period_code}")
+            code_suffix = int(period_code[4:6])
+
+            if frequency == "quarterly":
+                if code_suffix < 1 or code_suffix > 4:
+                    raise IBGEContractError(f"Invalid quarter in period: {period_code}")
+                month = (code_suffix - 1) * 3 + 1
+            else:
+                month = code_suffix
+                if month < 1 or month > 12:
+                    raise IBGEContractError(f"Invalid month in period: {period_code}")
 
             day = date(year, month, 1)
             if day > now_date:
@@ -97,12 +105,19 @@ def parse_ibge_ipca(body: bytes | str) -> list[tuple[date, Decimal]]:
 
         for period_code, val_str in serie.items():
             if not period_code or len(period_code) != 6 or not period_code.isdigit():
-                raise IBGEContractError(f"Invalid Agregados monthly period: {period_code}")
+                raise IBGEContractError(f"Invalid Agregados period: {period_code}")
 
             year = int(period_code[:4])
-            month = int(period_code[4:6])
-            if month < 1 or month > 12:
-                raise IBGEContractError(f"Invalid month in period: {period_code}")
+            code_suffix = int(period_code[4:6])
+
+            if frequency == "quarterly":
+                if code_suffix < 1 or code_suffix > 4:
+                    raise IBGEContractError(f"Invalid quarter in period: {period_code}")
+                month = (code_suffix - 1) * 3 + 1
+            else:
+                month = code_suffix
+                if month < 1 or month > 12:
+                    raise IBGEContractError(f"Invalid month in period: {period_code}")
 
             day = date(year, month, 1)
             if day > now_date:
@@ -130,11 +145,13 @@ def parse_ibge_ipca(body: bytes | str) -> list[tuple[date, Decimal]]:
     return sorted(results)
 
 
-def fetch_ipca(periods: str = "last 12", session: requests.Session | None = None) -> tuple[bytes, str]:
-    """Fetch IPCA monthly variations from IBGE SIDRA API.
+def parse_ibge_ipca(body: bytes | str) -> list[tuple[date, Decimal]]:
+    """Parse and validate IPCA observations from IBGE SIDRA or Agregados API."""
+    return parse_ibge_sidra(body, frequency="monthly")
 
-    periods can be e.g. "last 12" or "all" or specific formatted periods.
-    """
+
+def fetch_ipca(periods: str = "last 12", session: requests.Session | None = None) -> tuple[bytes, str]:
+    """Fetch IPCA monthly variations from IBGE SIDRA API."""
     if session is None:
         session = requests.Session()
         session.mount("https://", HTTPAdapter(max_retries=Retry(
@@ -144,6 +161,38 @@ def fetch_ipca(periods: str = "last 12", session: requests.Session | None = None
         )))
 
     url = f"{SIDRA_BASE_URL}/p/{periods}/n1/1"
+    response = session.get(url, timeout=(10, 60))
+    response.raise_for_status()
+    return response.content, response.url
+
+
+def fetch_sidra_gdp(periods: str = "last 4", session: requests.Session | None = None) -> tuple[bytes, str]:
+    """Fetch quarterly GDP variations from IBGE SIDRA API (Table 5932)."""
+    if session is None:
+        session = requests.Session()
+        session.mount("https://", HTTPAdapter(max_retries=Retry(
+            total=3, backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["GET"]
+        )))
+
+    url = f"https://apisidra.ibge.gov.br/values/t/5932/v/6561/p/{periods}/c11255/90707/n1/1"
+    response = session.get(url, timeout=(10, 60))
+    response.raise_for_status()
+    return response.content, response.url
+
+
+def fetch_sidra_unemployment(periods: str = "last 4", session: requests.Session | None = None) -> tuple[bytes, str]:
+    """Fetch unemployment rate from IBGE SIDRA API (PNAD Contínua Table 4099)."""
+    if session is None:
+        session = requests.Session()
+        session.mount("https://", HTTPAdapter(max_retries=Retry(
+            total=3, backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["GET"]
+        )))
+
+    url = f"https://apisidra.ibge.gov.br/values/t/4099/v/4099/p/{periods}/n1/1"
     response = session.get(url, timeout=(10, 60))
     response.raise_for_status()
     return response.content, response.url

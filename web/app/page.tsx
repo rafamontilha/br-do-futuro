@@ -61,6 +61,9 @@ const units: Record<string, string> = {
   percent_year: "% ao ano",
   percent_day: "% ao dia",
   percent_gdp: "% do PIB",
+  percent_yoy: "% a.a. (interanual)",
+  brl_per_usd: "R$ / US$",
+  percent: "%",
 };
 const assumptionLabels: Record<string, string> = {
   interest: "Juros nominais efetivos ao ano",
@@ -206,7 +209,7 @@ export default async function Page({
       <section aria-labelledby="indicators">
         <div className="section-title">
           <h2 id="indicators">Pulso econômico</h2>
-          <span>03 séries no piloto / 12 domínios planejados</span>
+          <span>{catalog?.data.indicators.length || 6} séries no núcleo P0 / 12 domínios</span>
         </div>
         <div className="cards">
           {catalog?.data.indicators.map((indicator) => {
@@ -214,14 +217,22 @@ export default async function Page({
             return (
               <article key={indicator.indicator_id}>
                 <span className="eyebrow">
-                  {indicator.frequency === "daily" ? "DIÁRIO" : "MENSAL"}
+                  {indicator.frequency === "daily"
+                    ? "DIÁRIO"
+                    : indicator.frequency === "quarterly"
+                    ? "TRIMESTRAL"
+                    : "MENSAL"}
                 </span>
                 <h3>{indicator.name}</h3>
                 <div className="value">
                   {item
                     ? new Intl.NumberFormat("pt-BR", {
                         maximumFractionDigits:
-                          indicator.frequency === "daily" ? 6 : 2,
+                          indicator.indicator_id === "br.fx.usd_brl.ptax"
+                            ? 4
+                            : indicator.frequency === "daily"
+                            ? 6
+                            : 2,
                       }).format(item.value)
                     : "—"}
                 </div>

@@ -103,3 +103,60 @@ def test_pipeline_validate_dispatches_to_ibge():
 
     res = validate(payload, INDICATORS["br.ipca.monthly"])
     assert res == [(date(2025, 3, 1), Decimal("0.25"))]
+
+
+def test_parse_quarterly_gdp_format():
+    from bdf.sources.ibge import parse_ibge_sidra
+    payload = json.dumps([
+        {"NC": "Nível", "V": "Valor", "D2C": "Trimestre", "D3C": "Setores"},
+        {"NC": "1", "V": "2.5", "D2C": "202404", "D3C": "90707"},
+        {"NC": "1", "V": "2.9", "D2C": "202501", "D3C": "90707"}
+    ]).encode("utf-8")
+
+    result = parse_ibge_sidra(payload, frequency="quarterly")
+    assert len(result) == 2
+    assert result[0] == (date(2024, 10, 1), Decimal("2.5"))
+    assert result[1] == (date(2025, 1, 1), Decimal("2.9"))
+
+
+def test_parse_quarterly_invalid_quarter_raises_contract_error():
+    from bdf.sources.ibge import parse_ibge_sidra
+    payload = json.dumps([
+        {"NC": "Header", "V": "Valor", "D2C": "Trimestre"},
+        {"NC": "1", "V": "3.1", "D2C": "202505"}
+    ]).encode("utf-8")
+
+    with pytest.raises(IBGEContractError, match="Invalid quarter in period"):
+        parse_ibge_sidra(payload, frequency="quarterly")
+
+
+def test_pipeline_validate_gdp_quarterly():
+    payload = json.dumps([
+        {"NC": "Nível", "V": "Valor", "D2C": "Trimestre"},
+        {"NC": "1", "V": "3.0", "D2C": "202402"}
+    ]).encode("utf-8")
+
+    result = validate(payload, INDICATORS["br.gdp.quarterly_yoy"])
+    assert result == [(date(2024, 4, 1), Decimal("3.0"))]
+
+
+def test_pipeline_validate_unemployment_quarterly():
+    payload = json.dumps([
+        {"NC": "Nível", "V": "Valor", "D2C": "Trimestre"},
+        {"NC": "1", "V": "7.5", "D2C": "202403"}
+    ]).encode("utf-8")
+
+    result = validate(payload, INDICATORS["br.labor.unemployment_rate"])
+    assert result == [(date(2024, 7, 1), Decimal("7.5"))]
+
+
+def test_pipeline_validate_fx_ptax_daily():
+    payload = json.dumps([
+        {"data": "15/01/2025", "valor": "6.1205"},
+        {"data": "16/01/2025", "valor": "6.1450"}
+    ]).encode("utf-8")
+
+    result = validate(payload, INDICATORS["br.fx.usd_brl.ptax"])
+    assert len(result) == 2
+    assert result[0] == (date(2025, 1, 15), Decimal("6.1205"))
+    assert result[1] == (date(2025, 1, 16), Decimal("6.1450"))
