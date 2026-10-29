@@ -107,6 +107,25 @@
       "quality_status": "unavailable"
     },
     {
+      "name": "IPCA acumulado em 12 meses",
+      "domain": 2,
+      "series": 13522,
+      "unit": "percent_year",
+      "frequency": "monthly",
+      "origin": "IBGE via BCB/SGS",
+      "revisable": true,
+      "indicator_id": "br.ipca.12m",
+      "geography": "BR",
+      "adjustment": "non-seasonally-adjusted",
+      "owner_role": "Data Steward",
+      "methodology_version": "sgs-contract-v1",
+      "license_status": "pending_review",
+      "calendar_status": "pending_validation",
+      "source_status": "candidate",
+      "source_uri": "https://api.bcb.gov.br/dados/serie/bcdata.sgs.13522/dados",
+      "quality_status": "unavailable"
+    },
+    {
       "name": "Selic efetiva diária",
       "domain": 3,
       "series": 11,

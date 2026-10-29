@@ -8,6 +8,8 @@ DOMAINS = [
 INDICATORS = {
     "br.ipca.monthly": dict(name="IPCA mensal", domain=2, series=433, unit="percent_month",
                             frequency="monthly", origin="IBGE via BCB/SGS", revisable=True),
+    "br.ipca.12m": dict(name="IPCA acumulado em 12 meses", domain=2, series=13522, unit="percent_year",
+                        frequency="monthly", origin="IBGE via BCB/SGS", revisable=True),
     "br.selic.daily": dict(name="Selic efetiva diária", domain=3, series=11, unit="percent_day",
                            frequency="daily", origin="BCB/SGS", revisable=True),
     "br.debt.gross_pct_gdp": dict(name="Dívida bruta do governo geral", domain=12, series=13762,

@@ -48,9 +48,8 @@ def main():
     dsn = os.environ["DATABASE_URL"]
     if args.command == "migrate":
         with psycopg.connect(dsn) as conn:
-            conn.execute(Path("db/001_foundation.sql").read_text())
-            conn.execute(Path("db/002_dynamic_and_institutional.sql").read_text())
-            conn.execute(Path("db/003_source_schedules_and_replay.sql").read_text())
+            for migration in sorted(Path("db").glob("*.sql")):
+                conn.execute(migration.read_text())
     elif args.command == "worker":
         print(json.dumps(drain(dsn)))
     elif args.command == "ingest":

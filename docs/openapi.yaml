@@ -144,6 +144,46 @@ paths:
         '200': {$ref: '#/components/responses/Envelope'}
         '404': {description: Replay não encontrado}
         '503': {description: Banco indisponível}
+  /v1/proposals:
+    get:
+      summary: Carteira de propostas públicas avaliadas do Policy Lab
+      parameters:
+        - {name: axis, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {$ref: '#/components/parameters/Mode'}
+        - {$ref: '#/components/parameters/AsOf'}
+      responses:
+        '200': {$ref: '#/components/responses/Envelope'}
+        '503': {description: Consulta indisponível}
+  /v1/proposals/{id}:
+    get:
+      summary: Detalhamento de proposta pública com mecanismo causal e referências
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - {$ref: '#/components/parameters/Mode'}
+        - {$ref: '#/components/parameters/AsOf'}
+      responses:
+        '200': {$ref: '#/components/responses/Envelope'}
+        '404': {description: Proposta não encontrada}
+        '503': {description: Consulta indisponível}
+  /v1/guidance/commitments:
+    get:
+      summary: Matriz de 4 quadrantes de compromissos do Guidance Brasil 2027-2030
+      parameters:
+        - {$ref: '#/components/parameters/Mode'}
+        - {$ref: '#/components/parameters/AsOf'}
+      responses:
+        '200': {$ref: '#/components/responses/Envelope'}
+        '503': {description: Consulta indisponível}
+  /v1/scenarios/calibrations:
+    get:
+      summary: Parâmetros fiscais calibrados e elasticidades vinculadas aos cenários
+      parameters:
+        - {$ref: '#/components/parameters/Mode'}
+        - {$ref: '#/components/parameters/AsOf'}
+      responses:
+        '200': {$ref: '#/components/responses/Envelope'}
+        '503': {description: Consulta indisponível}
 components:
   parameters:
     Mode:

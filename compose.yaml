@@ -12,6 +12,7 @@ services:
       - ./db/001_foundation.sql:/docker-entrypoint-initdb.d/001.sql:ro
       - ./db/002_dynamic_and_institutional.sql:/docker-entrypoint-initdb.d/002.sql:ro
       - ./db/003_source_schedules_and_replay.sql:/docker-entrypoint-initdb.d/003.sql:ro
+      - ./db/004_proposals_and_guidance.sql:/docker-entrypoint-initdb.d/004.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U bdf -d bdf"]
       interval: 2s
