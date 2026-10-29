@@ -15,6 +15,8 @@ export interface GuidanceCommitment {
   target_value: number | string;
   forecast_value?: number | string | null;
   actual_latest_value?: number | string | null;
+  actual_reference_period?: string | null;
+  actual_quality_status?: string | null;
   unit: string;
   variance_explanation?: string | null;
   review_policy: string;
@@ -39,7 +41,9 @@ const defaultCommitments: GuidanceCommitment[] = [
     baseline_value: 77.8,
     target_value: 75.0,
     forecast_value: 81.4,
-    actual_latest_value: 78.5,
+    actual_latest_value: null,
+    actual_reference_period: null,
+    actual_quality_status: null,
     unit: "% do PIB",
     variance_explanation: "Divergência entre o cenário de continuidade (dívida em alta devido a juros reais elevados) e a meta experimental de estabilização fundamentada nas propostas do Policy Lab.",
     review_policy: "annual",
@@ -57,7 +61,9 @@ const defaultCommitments: GuidanceCommitment[] = [
     baseline_value: 4.1,
     target_value: 3.0,
     forecast_value: 3.8,
-    actual_latest_value: 4.2,
+    actual_latest_value: null,
+    actual_reference_period: null,
+    actual_quality_status: null,
     unit: "% a.a.",
     variance_explanation: "Meta contínua de 3,00% com intervalo de tolerância de 1,50 p.p. fixada pelo CMN para o IPCA acumulado em 12 meses; modelo projeta pressão residual no curto prazo.",
     review_policy: "annual",
@@ -75,7 +81,9 @@ const defaultCommitments: GuidanceCommitment[] = [
     baseline_value: 16.5,
     target_value: 20.0,
     forecast_value: 17.2,
-    actual_latest_value: 16.8,
+    actual_latest_value: null,
+    actual_reference_period: null,
+    actual_quality_status: null,
     unit: "% do PIB",
     variance_explanation: "Meta experimental condicionada à segurança jurídica de concessões e atração de capital privado de longo prazo.",
     review_policy: "annual",
@@ -119,7 +127,7 @@ export function GuidanceCommitmentsMatrix({ initialCommitments }: GuidanceCommit
               <th style={{ padding: "14px 16px", fontWeight: 600 }}>Baseline</th>
               <th style={{ padding: "14px 16px", fontWeight: 600 }}>Meta Proposta</th>
               <th style={{ padding: "14px 16px", fontWeight: 600 }}>Projeção (Forecast)</th>
-              <th style={{ padding: "14px 16px", fontWeight: 600 }}>Realizado Oficial (Actual)</th>
+              <th style={{ padding: "14px 16px", fontWeight: 600 }}>Realizado (Observação Auditada)</th>
               <th style={{ padding: "14px 16px", fontWeight: 600 }}>Desvio (Obs - Meta)</th>
               <th style={{ padding: "14px 16px", fontWeight: 600 }}>Governança</th>
             </tr>
@@ -199,10 +207,26 @@ export function GuidanceCommitmentsMatrix({ initialCommitments }: GuidanceCommit
                         <div style={{ fontWeight: 700, color: "var(--ink, #15342d)" }}>
                           {aVal.toFixed(1)} {c.unit}
                         </div>
-                        <div style={{ fontSize: "11px", color: "#1b5e20" }}>Última publicação</div>
+                        <div
+                          style={{
+                            fontSize: "11px",
+                            color: c.actual_quality_status === "source" ? "#1b5e20" : "var(--muted, #52675d)",
+                          }}
+                        >
+                          {c.actual_quality_status === "source"
+                            ? `Oficial auditado (${c.actual_reference_period ?? "recente"})`
+                            : `Demonstração técnica (${c.actual_quality_status ?? "sintética"})`}
+                        </div>
                       </div>
                     ) : (
-                      <span style={{ color: "var(--muted, #52675d)", fontStyle: "italic" }}>Aguardando</span>
+                      <div>
+                        <span style={{ color: "var(--muted, #52675d)", fontStyle: "italic", fontSize: "12.5px" }}>
+                          Aguardando observação verificada
+                        </span>
+                        <div style={{ fontSize: "10.5px", color: "var(--muted, #52675d)", marginTop: "2px" }}>
+                          Sem captura oficial auditada
+                        </div>
+                      </div>
                     )}
                   </td>
                   <td style={{ padding: "14px 16px", verticalAlign: "top" }}>

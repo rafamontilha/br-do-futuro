@@ -155,3 +155,19 @@ func TestFiscalCalibrationsWithoutDB(t *testing.T) {
 		t.Fatalf("expected 503 when db nil, got %d", w.Code)
 	}
 }
+
+func TestGuidanceAndProposalsAsOfValidation(t *testing.T) {
+	a := &API{db: nil}
+	for _, path := range []string{
+		"/v1/guidance/commitments?as_of=invalid-date",
+		"/v1/proposals?as_of=not-a-timestamp",
+		"/v1/scenarios/calibrations?as_of=2020-99-99",
+	} {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", path, nil)
+		a.handle(w, r)
+		if w.Code != 400 {
+			t.Fatalf("expected 400 bad request for %s, got %d", path, w.Code)
+		}
+	}
+}

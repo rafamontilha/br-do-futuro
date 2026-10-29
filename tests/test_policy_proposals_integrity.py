@@ -101,6 +101,7 @@ def test_guidance_commitments_separation_and_governance(db):
             assert b_period and b_val is not None, f"Commitment {comm_id} must have valid baseline"
             assert t_val is not None, f"Commitment {comm_id} must have target value"
             assert unit, f"Commitment {comm_id} must have valid unit"
+            assert a_val is None, f"Commitment {comm_id} must have actual_latest_value NULL until backed by traceable observations"
 
 
 def test_fiscal_calibrations_integrity(db):

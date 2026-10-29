@@ -102,6 +102,13 @@ for comm in commitments:
     assert comm['baseline_value'] is not None
     assert comm['target_value'] is not None
 
+# Validação do corte temporal histórico (as_of) para evitar anacronismo
+historical_guidance = get('/v1/guidance/commitments?as_of=2020-01-01T00:00:00Z')['data']
+assert len(historical_guidance) == 0, "Guidance commitments cannot appear before creation date"
+
+historical_proposals = get('/v1/proposals?as_of=2020-01-01T00:00:00Z')['data']
+assert len(historical_proposals) == 0, "Proposals cannot appear before creation date"
+
 calibrations = get('/v1/scenarios/calibrations')['data']
 assert len(calibrations) >= 4
 
