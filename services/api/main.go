@@ -20,8 +20,9 @@ import (
 )
 
 type API struct {
-	db      *pgxpool.Pool
-	catalog json.RawMessage
+	db          *pgxpool.Pool
+	catalog     json.RawMessage
+	rateLimiter *RateLimiter
 }
 
 func newUUID() string {
@@ -277,7 +278,11 @@ type OutboxReplayRequest struct {
 	FilterEventType   string `json:"filter_event_type"`
 }
 
-func (a *API) handleOutboxReplay(w http.ResponseWriter, r *http.Request, ctx context.Context) {
+func (a *API) handleOutboxReplay(w http.ResponseWriter, r *http.Request, ctx context.Context, auth AuthContext) {
+	if !requireRole(w, auth, RoleReviewer) {
+		return
+	}
+
 	var req OutboxReplayRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		write(w, http.StatusBadRequest, map[string]string{"error": "invalid request body: " + err.Error()})
@@ -289,8 +294,8 @@ func (a *API) handleOutboxReplay(w http.ResponseWriter, r *http.Request, ctx con
 	}
 
 	triggeredBy := strings.TrimSpace(req.TriggeredBy)
-	if triggeredBy == "" {
-		triggeredBy = "api-operator"
+	if triggeredBy == "" || triggeredBy == "api-operator" {
+		triggeredBy = auth.ActorID
 	}
 
 	if a.db == nil {
@@ -421,6 +426,12 @@ func (a *API) handleGetProposals(w http.ResponseWriter, r *http.Request, ctx con
 		write(w, http.StatusServiceUnavailable, map[string]string{"error": "data temporarily unavailable"})
 		return
 	}
+	pagination := parsePaginationParams(r)
+	pagedData, pageMeta, err := paginateJSONArray(data, pagination)
+	if err == nil {
+		meta["pagination"] = pageMeta
+		data = pagedData
+	}
 	write(w, http.StatusOK, map[string]any{"meta": meta, "data": data})
 }
 
@@ -524,13 +535,22 @@ func (a *API) handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	auth := a.authenticate(r)
+	if !a.checkRateLimit(w, r, auth) {
+		return
+	}
+
 	if r.Method == http.MethodPost {
 		if r.URL.Path == "/v1/simulations/fiscal" {
 			a.handleCreateSimulation(w, r, ctx)
 			return
 		}
 		if r.URL.Path == "/v1/admin/outbox/replay" {
-			a.handleOutboxReplay(w, r, ctx)
+			a.handleOutboxReplay(w, r, ctx, auth)
+			return
+		}
+		if r.URL.Path == "/v1/admin/audit/decisions" {
+			a.handleCreateDecisionAudit(w, r, ctx, auth)
 			return
 		}
 		w.Header().Set("Allow", "GET")
@@ -606,6 +626,16 @@ func (a *API) handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.URL.Path == "/v1/admin/audit/decisions" {
+		a.handleGetDecisionAudit(w, r, ctx, meta, auth)
+		return
+	}
+
+	if r.URL.Path == "/v1/observability/metrics" {
+		a.handleGetObservabilityMetrics(w, r, ctx, meta)
+		return
+	}
+
 	var sql string
 	args := []any{mode, asOf}
 	switch {
@@ -643,6 +673,12 @@ func (a *API) handle(w http.ResponseWriter, r *http.Request) {
 		write(w, http.StatusServiceUnavailable, map[string]string{"error": "data temporarily unavailable"})
 		return
 	}
+	pagination := parsePaginationParams(r)
+	pagedData, pageMeta, err := paginateJSONArray(data, pagination)
+	if err == nil {
+		meta["pagination"] = pageMeta
+		data = pagedData
+	}
 	write(w, http.StatusOK, map[string]any{"meta": meta, "data": data})
 }
 
@@ -663,7 +699,7 @@ func main() {
 		slog.Error("invalid_catalog")
 		os.Exit(1)
 	}
-	a := &API{db: pool, catalog: catalog}
+	a := &API{db: pool, catalog: catalog, rateLimiter: NewRateLimiter()}
 	server := &http.Server{
 		Addr:              ":8080",
 		Handler:           http.HandlerFunc(a.handle),

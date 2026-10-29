@@ -184,6 +184,52 @@ paths:
       responses:
         '200': {$ref: '#/components/responses/Envelope'}
         '503': {description: Consulta indisponível}
+  /v1/admin/audit/decisions:
+    get:
+      summary: Consulta paginada da trilha imutável de auditoria de decisões
+      security:
+        - BearerAuth: []
+        - RoleHeader: []
+      parameters:
+        - {name: entity_type, in: query, schema: {type: string}}
+        - {name: actor_id, in: query, schema: {type: string}}
+        - {$ref: '#/components/parameters/Limit'}
+        - {$ref: '#/components/parameters/Offset'}
+      responses:
+        '200': {$ref: '#/components/responses/Envelope'}
+        '401': {description: Não autenticado}
+        '403': {description: Permissões insuficientes}
+        '503': {description: Banco indisponível}
+    post:
+      summary: Homologação de nova decisão auditável com encadeamento de hash SHA-256
+      security:
+        - BearerAuth: []
+        - RoleHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, entity_type, entity_id, justification, new_state]
+              properties:
+                event_id: {type: string}
+                action: {type: string}
+                entity_type: {type: string}
+                entity_id: {type: string}
+                justification: {type: string}
+                previous_state: {type: object}
+                new_state: {type: object}
+      responses:
+        '201': {description: Decisão registrada com sucesso}
+        '400': {description: Dados da decisão inválidos}
+        '401': {description: Não autenticado}
+        '403': {description: Permissões insuficientes (mínimo reviewer)}
+  /v1/observability/metrics:
+    get:
+      summary: Métricas consolidadas dos 4 planos de observabilidade e conformidade de SLOs
+      responses:
+        '200': {$ref: '#/components/responses/Envelope'}
 components:
   parameters:
     Mode:
@@ -195,6 +241,25 @@ components:
       in: query
       description: RFC3339 com timezone. Padrão é o momento da consulta.
       schema: {type: string, format: date-time}
+    Limit:
+      name: limit
+      in: query
+      description: Quantidade máxima de registros retornados (padrão 50, máx 200).
+      schema: {type: integer, default: 50, maximum: 200}
+    Offset:
+      name: offset
+      in: query
+      description: Deslocamento inicial para paginação.
+      schema: {type: integer, default: 0}
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    RoleHeader:
+      type: apiKey
+      in: header
+      name: X-Actor-Role
   responses:
     Envelope:
       description: Metadados temporais e dados; arrays podem estar vazios
