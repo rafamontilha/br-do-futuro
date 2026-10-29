@@ -386,6 +386,109 @@ func (a *API) handleGetReplayAudit(w http.ResponseWriter, r *http.Request, ctx c
 	write(w, http.StatusOK, map[string]any{"meta": meta, "data": data})
 }
 
+func (a *API) handleGetProposals(w http.ResponseWriter, r *http.Request, ctx context.Context, meta map[string]any) {
+	if a.db == nil {
+		write(w, http.StatusServiceUnavailable, map[string]string{"error": "database unavailable"})
+		return
+	}
+	axis := r.URL.Query().Get("axis")
+	status := r.URL.Query().Get("status")
+
+	query := `SELECT COALESCE(jsonb_agg(to_jsonb(t)), '[]') FROM (
+		SELECT id, title, policy_axis, status, problem_statement, causal_mechanism,
+		       cost_estimate_annual_brl, cost_pct_gdp, funding_source, institutional_competence,
+		       responsible_actors, counterfactual_summary, empirical_evidence, target_indicator_id,
+		       created_at, updated_at
+		FROM public_proposals
+		WHERE 1=1`
+	var args []any
+	argIdx := 1
+	if axis != "" {
+		query += fmt.Sprintf(" AND policy_axis = $%d", argIdx)
+		args = append(args, axis)
+		argIdx++
+	}
+	if status != "" {
+		query += fmt.Sprintf(" AND status = $%d", argIdx)
+		args = append(args, status)
+		argIdx++
+	}
+	query += ` ORDER BY created_at ASC, id ASC) t`
+
+	var data json.RawMessage
+	if err := a.db.QueryRow(ctx, query, args...).Scan(&data); err != nil {
+		slog.Error("query_proposals_failed", "error", err)
+		write(w, http.StatusServiceUnavailable, map[string]string{"error": "data temporarily unavailable"})
+		return
+	}
+	write(w, http.StatusOK, map[string]any{"meta": meta, "data": data})
+}
+
+func (a *API) handleGetProposalByID(w http.ResponseWriter, r *http.Request, ctx context.Context, meta map[string]any, proposalID string) {
+	proposalID = strings.TrimSpace(proposalID)
+	if proposalID == "" || strings.Contains(proposalID, "/") {
+		write(w, http.StatusNotFound, map[string]string{"error": "proposal not found"})
+		return
+	}
+	if a.db == nil {
+		write(w, http.StatusServiceUnavailable, map[string]string{"error": "database unavailable"})
+		return
+	}
+	var data json.RawMessage
+	err := a.db.QueryRow(ctx, `SELECT to_jsonb(p) FROM public_proposals p WHERE id = $1`, proposalID).Scan(&data)
+	if err != nil {
+		write(w, http.StatusNotFound, map[string]string{"error": "proposal not found"})
+		return
+	}
+	write(w, http.StatusOK, map[string]any{"meta": meta, "data": data})
+}
+
+func (a *API) handleGetGuidanceCommitments(w http.ResponseWriter, r *http.Request, ctx context.Context, meta map[string]any) {
+	if a.db == nil {
+		write(w, http.StatusServiceUnavailable, map[string]string{"error": "database unavailable"})
+		return
+	}
+	var data json.RawMessage
+	sql := `SELECT COALESCE(jsonb_agg(to_jsonb(t)), '[]') FROM (
+		SELECT g.id, g.proposal_id, g.indicator_id, g.name, g.horizon_year, g.status,
+		       g.baseline_period, g.baseline_value, g.target_value, g.forecast_value,
+		       g.actual_latest_value, g.unit, g.variance_explanation, g.review_policy,
+		       g.human_review_required, g.created_at, g.updated_at,
+		       p.title AS proposal_title
+		FROM guidance_commitments g
+		LEFT JOIN public_proposals p ON p.id = g.proposal_id
+		ORDER BY g.horizon_year ASC, g.id ASC
+	) t`
+	if err := a.db.QueryRow(ctx, sql).Scan(&data); err != nil {
+		slog.Error("query_guidance_failed", "error", err)
+		write(w, http.StatusServiceUnavailable, map[string]string{"error": "data temporarily unavailable"})
+		return
+	}
+	write(w, http.StatusOK, map[string]any{"meta": meta, "data": data})
+}
+
+func (a *API) handleGetFiscalCalibrations(w http.ResponseWriter, r *http.Request, ctx context.Context, meta map[string]any) {
+	if a.db == nil {
+		write(w, http.StatusServiceUnavailable, map[string]string{"error": "database unavailable"})
+		return
+	}
+	var data json.RawMessage
+	sql := `SELECT COALESCE(jsonb_agg(to_jsonb(t)), '[]') FROM (
+		SELECT c.id, c.scenario_id, c.proposal_id, c.elasticity_revenue_gdp,
+		       c.real_interest_rate_spread, c.primary_balance_shift_pct_gdp, c.notes, c.created_at,
+		       p.title AS proposal_title
+		FROM fiscal_calibrations c
+		LEFT JOIN public_proposals p ON p.id = c.proposal_id
+		ORDER BY c.scenario_id ASC, c.id ASC
+	) t`
+	if err := a.db.QueryRow(ctx, sql).Scan(&data); err != nil {
+		slog.Error("query_calibrations_failed", "error", err)
+		write(w, http.StatusServiceUnavailable, map[string]string{"error": "data temporarily unavailable"})
+		return
+	}
+	write(w, http.StatusOK, map[string]any{"meta": meta, "data": data})
+}
+
 func (a *API) handle(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
@@ -464,6 +567,27 @@ func (a *API) handle(w http.ResponseWriter, r *http.Request) {
 	if strings.HasPrefix(r.URL.Path, "/v1/admin/outbox/replay/") {
 		replayID := strings.TrimPrefix(r.URL.Path, "/v1/admin/outbox/replay/")
 		a.handleGetReplayAudit(w, r, ctx, meta, replayID)
+		return
+	}
+
+	if strings.HasPrefix(r.URL.Path, "/v1/proposals/") {
+		proposalID := strings.TrimPrefix(r.URL.Path, "/v1/proposals/")
+		a.handleGetProposalByID(w, r, ctx, meta, proposalID)
+		return
+	}
+
+	if r.URL.Path == "/v1/proposals" {
+		a.handleGetProposals(w, r, ctx, meta)
+		return
+	}
+
+	if r.URL.Path == "/v1/guidance/commitments" {
+		a.handleGetGuidanceCommitments(w, r, ctx, meta)
+		return
+	}
+
+	if r.URL.Path == "/v1/scenarios/calibrations" {
+		a.handleGetFiscalCalibrations(w, r, ctx, meta)
 		return
 	}
 

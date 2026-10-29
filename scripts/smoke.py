@@ -79,7 +79,33 @@ assert replay_get['id'] == replay_id
 assert replay_get['status'] == 'completed'
 assert replay_get['triggered_by'] == 'smoke-test'
 
+# Verificações do Incremento 03: Propostas Públicas, Guidance e Calibrações
+proposals = get('/v1/proposals')['data']
+assert len(proposals) >= 3
+assert any(p['id'] == 'prop-fiscal-mandatory-spending' for p in proposals)
+assert any(p['id'] == 'prop-infra-investment-acceleration' for p in proposals)
+assert any(p['id'] == 'prop-tax-reform-neutrality' for p in proposals)
+
+single_prop = get('/v1/proposals/prop-fiscal-mandatory-spending')['data']
+assert single_prop['institutional_competence'] == 'constitutional_amendment'
+assert 'desindexação' in single_prop['causal_mechanism'].lower()
+assert float(single_prop['cost_estimate_annual_brl']) == -45.0
+
+bad_prop = requests.get(base+'/v1/proposals/nao-existe', timeout=10)
+assert bad_prop.status_code == 404
+
+commitments = get('/v1/guidance/commitments')['data']
+assert len(commitments) >= 3
+for comm in commitments:
+    assert comm['human_review_required'] is True
+    assert comm['status'] == 'experimental_hypothesis'
+    assert comm['baseline_value'] is not None
+    assert comm['target_value'] is not None
+
+calibrations = get('/v1/scenarios/calibrations')['data']
+assert len(calibrations) >= 4
+
 real=get('/v1/observations')['data']
 assert all(o['quality_status']=='provisional' for o in real)
 assert get('/v1/observations')['meta']['mode']=='source'
-print(f'API smoke passed: 6 synthetic points, 3 scenarios, 3 alerts, 7 institutions, dynamic simulations, source health ({len(sources_health)} schedules) and outbox replay verified; {len(real)} provisional source points')
+print(f'API smoke passed: 6 synthetic points, 3 scenarios, 3 alerts, 7 institutions, dynamic simulations, source health ({len(sources_health)} schedules), outbox replay, {len(proposals)} proposals, {len(commitments)} guidance commitments and {len(calibrations)} calibrations verified; {len(real)} provisional source points')

@@ -110,3 +110,48 @@ func TestSourceHealthWithoutDB(t *testing.T) {
 		t.Fatalf("expected 503 when db nil, got %d", w.Code)
 	}
 }
+
+func TestProposalsEndpointsWithoutDB(t *testing.T) {
+	a := &API{db: nil}
+
+	wList := httptest.NewRecorder()
+	rList := httptest.NewRequest("GET", "/v1/proposals", nil)
+	a.handle(wList, rList)
+	if wList.Code != 503 {
+		t.Fatalf("expected 503 when db nil, got %d", wList.Code)
+	}
+
+	wDetail := httptest.NewRecorder()
+	rDetail := httptest.NewRequest("GET", "/v1/proposals/prop-fiscal-mandatory-spending", nil)
+	a.handle(wDetail, rDetail)
+	if wDetail.Code != 503 {
+		t.Fatalf("expected 503 when db nil, got %d", wDetail.Code)
+	}
+
+	wEmpty := httptest.NewRecorder()
+	rEmpty := httptest.NewRequest("GET", "/v1/proposals/%20", nil)
+	a.handle(wEmpty, rEmpty)
+	if wEmpty.Code != 404 {
+		t.Fatalf("expected 404 for empty proposal id, got %d", wEmpty.Code)
+	}
+}
+
+func TestGuidanceCommitmentsWithoutDB(t *testing.T) {
+	a := &API{db: nil}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/v1/guidance/commitments", nil)
+	a.handle(w, r)
+	if w.Code != 503 {
+		t.Fatalf("expected 503 when db nil, got %d", w.Code)
+	}
+}
+
+func TestFiscalCalibrationsWithoutDB(t *testing.T) {
+	a := &API{db: nil}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/v1/scenarios/calibrations", nil)
+	a.handle(w, r)
+	if w.Code != 503 {
+		t.Fatalf("expected 503 when db nil, got %d", w.Code)
+	}
+}

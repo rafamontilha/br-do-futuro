@@ -1,6 +1,10 @@
 import { DynamicSimulationSection } from "./components/DynamicSimulationSection";
 import { InstitutionalMatrix, type InstitutionalActor } from "./components/InstitutionalMatrix";
 import { SourceFreshnessPanel, type SourceSchedule } from "./components/SourceFreshnessPanel";
+import { GovernanceDisclaimerAlert } from "./components/GovernanceDisclaimerAlert";
+import { PolicyLabPortfolio } from "./components/PolicyLabPortfolio";
+import { type PublicProposal } from "./components/ProposalDetailModal";
+import { GuidanceCommitmentsMatrix, type GuidanceCommitment } from "./components/GuidanceCommitmentsMatrix";
 
 export const dynamic = "force-dynamic";
 type Observation = {
@@ -122,13 +126,15 @@ export default async function Page({
   searchParams: Promise<{ mode?: string }>;
 }) {
   const mode = (await searchParams).mode === "fixture" ? "fixture" : "source";
-  const [catalog, observations, scenarios, alerts, institutions, sourcesHealth] = await Promise.all([
+  const [catalog, observations, scenarios, alerts, institutions, sourcesHealth, proposals, guidance] = await Promise.all([
     load<Catalog>("indicators", mode),
     load<Observation[]>("observations", mode),
     load<Scenario[]>("scenarios", mode),
     load<Alert[]>("alerts", mode),
     load<InstitutionalActor[]>("institutions", mode),
     load<SourceSchedule[]>("health/sources", mode),
+    load<PublicProposal[]>("proposals", mode),
+    load<GuidanceCommitment[]>("guidance/commitments", mode),
   ]);
   const latest = new Map<string, Observation>();
   for (const item of observations?.data || []) {
@@ -186,6 +192,7 @@ export default async function Page({
             : "Capturas técnicas são provisórias. Licenças, calendários e metadados aguardam validação. A atualidade na origem não foi confirmada."}
         </p>
       </aside>
+      <GovernanceDisclaimerAlert />
       {(!catalog || !observations || !scenarios || !alerts) && (
         <p role="alert" className="notice">
           Um ou mais serviços estão indisponíveis. Os dados ausentes não serão
@@ -340,6 +347,8 @@ export default async function Page({
           <p className="empty">Nenhum alerta material registrado neste modo.</p>
         )}
       </section>
+      <PolicyLabPortfolio initialProposals={proposals?.data} />
+      <GuidanceCommitmentsMatrix initialCommitments={guidance?.data} />
       <SourceFreshnessPanel initialSchedules={sourcesHealth?.data} />
       <InstitutionalMatrix
         institutions={
