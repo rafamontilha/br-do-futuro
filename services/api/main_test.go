@@ -77,3 +77,36 @@ func TestNewUUID(t *testing.T) {
 		t.Fatalf("malformed uuid structure: %s", u1)
 	}
 }
+
+func TestValidateOutboxReplay(t *testing.T) {
+	a := &API{db: nil}
+	for _, tc := range []struct {
+		name         string
+		payload      string
+		expectedCode int
+	}{
+		{"invalid json", `{"reason":`, 400},
+		{"empty reason", `{"reason": "   "}`, 400},
+		{"missing reason", `{"triggered_by": "operator"}`, 400},
+		{"valid reason returns 503 when db nil", `{"reason": "audit fix test"}`, 503},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("POST", "/v1/admin/outbox/replay", bytes.NewBufferString(tc.payload))
+			a.handle(w, r)
+			if w.Code != tc.expectedCode {
+				t.Fatalf("for %s: expected %d, got %d", tc.name, tc.expectedCode, w.Code)
+			}
+		})
+	}
+}
+
+func TestSourceHealthWithoutDB(t *testing.T) {
+	a := &API{db: nil}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/v1/health/sources", nil)
+	a.handle(w, r)
+	if w.Code != 503 {
+		t.Fatalf("expected 503 when db nil, got %d", w.Code)
+	}
+}

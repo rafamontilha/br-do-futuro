@@ -18,9 +18,18 @@ TRACER = trace.get_tracer("brasil-do-futuro.ingestion")
 
 
 def validate(body, indicator):
-    rows = json.loads(body)
+    try:
+        rows = json.loads(body)
+    except Exception as exc:
+        raise ValueError("Invalid JSON payload") from exc
     if not isinstance(rows, list) or not rows:
-        raise ValueError("Expected a non-empty SGS array")
+        raise ValueError("Expected a non-empty array")
+
+    # If first element has D2C or resultados, it is an IBGE response (SIDRA or Agregados)
+    if isinstance(rows[0], dict) and ("D2C" in rows[0] or "resultados" in rows[0]):
+        from .sources.ibge import parse_ibge_ipca
+        return parse_ibge_ipca(body)
+
     result, seen = [], set()
     for row in rows:
         if not isinstance(row, dict) or set(row) != {"data", "valor"}:
@@ -76,9 +85,12 @@ def ingest(dsn, indicator_id, body, source_uri, mode="fixture", published_at=Non
             conn.execute("""INSERT INTO ingestion_run VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",
                          (run_id, indicator_id, now, source_uri, digest, mode, status, error))
             if changes:
+                methodology_ver = indicator["methodology_version"]
+                if "ibge" in source_uri.lower() or "sidra" in source_uri.lower():
+                    methodology_ver = "ibge-sidra-contract-v1"
                 conn.execute("""INSERT INTO vintage(id,run_id,published_at,methodology_version,quality_status)
                     VALUES (%s,%s,%s,%s,%s)""", (vintage_id, run_id, published_at,
-                    indicator["methodology_version"], "synthetic" if mode == "fixture" else "provisional"))
+                    methodology_ver, "synthetic" if mode == "fixture" else "provisional"))
             for day, value, old in changes:
                 obs_id, event_id = uuid4(), uuid4()
                 conn.execute("INSERT INTO observation VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",

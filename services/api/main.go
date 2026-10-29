@@ -248,6 +248,144 @@ func (a *API) handleGetInstitutions(w http.ResponseWriter, r *http.Request, ctx 
 	write(w, http.StatusOK, map[string]any{"meta": meta, "data": data})
 }
 
+func (a *API) handleGetSourceHealth(w http.ResponseWriter, r *http.Request, ctx context.Context, meta map[string]any) {
+	if a.db == nil {
+		write(w, http.StatusServiceUnavailable, map[string]string{"error": "database unavailable"})
+		return
+	}
+	var data json.RawMessage
+	sql := `SELECT COALESCE(jsonb_agg(to_jsonb(t)), '[]') FROM (
+		SELECT id, indicator_id, primary_source, fallback_source, cron_expression, frequency,
+		       expected_release_day_offset, to_char(expected_release_time, 'HH24:MI:SS') AS expected_release_time,
+		       tolerance_window_hours, last_checked_at, last_successful_at, next_expected_at,
+		       is_stale, current_delay_hours, consecutive_failures, circuit_open, metadata, created_at, updated_at
+		FROM source_schedules
+		ORDER BY indicator_id
+	) t`
+	if err := a.db.QueryRow(ctx, sql).Scan(&data); err != nil {
+		slog.Error("query_source_health_failed", "error", err)
+		write(w, http.StatusServiceUnavailable, map[string]string{"error": "data temporarily unavailable"})
+		return
+	}
+	write(w, http.StatusOK, map[string]any{"meta": meta, "data": data})
+}
+
+type OutboxReplayRequest struct {
+	Reason            string `json:"reason"`
+	TriggeredBy       string `json:"triggered_by"`
+	FilterIndicatorID string `json:"filter_indicator_id"`
+	FilterEventType   string `json:"filter_event_type"`
+}
+
+func (a *API) handleOutboxReplay(w http.ResponseWriter, r *http.Request, ctx context.Context) {
+	var req OutboxReplayRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		write(w, http.StatusBadRequest, map[string]string{"error": "invalid request body: " + err.Error()})
+		return
+	}
+	if strings.TrimSpace(req.Reason) == "" {
+		write(w, http.StatusBadRequest, map[string]string{"error": "reason is required for operational replay audit"})
+		return
+	}
+
+	triggeredBy := strings.TrimSpace(req.TriggeredBy)
+	if triggeredBy == "" {
+		triggeredBy = "api-operator"
+	}
+
+	if a.db == nil {
+		write(w, http.StatusServiceUnavailable, map[string]string{"error": "database unavailable"})
+		return
+	}
+
+	tx, err := a.db.Begin(ctx)
+	if err != nil {
+		slog.Error("begin_tx_failed", "error", err)
+		write(w, http.StatusInternalServerError, map[string]string{"error": "could not start transaction"})
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	replayID := fmt.Sprintf("replay-%s", newUUID())
+	_, err = tx.Exec(ctx, `
+		INSERT INTO outbox_replay_audit (id, triggered_by, filter_event_type, filter_indicator_id, reason, status)
+		VALUES ($1, $2, $3, $4, $5, 'running')
+	`, replayID, triggeredBy, req.FilterEventType, req.FilterIndicatorID, strings.TrimSpace(req.Reason))
+	if err != nil {
+		slog.Error("insert_replay_audit_failed", "error", err)
+		write(w, http.StatusInternalServerError, map[string]string{"error": "could not record replay audit"})
+		return
+	}
+
+	updateSQL := `UPDATE outbox SET status = 'pending', processed_at = NULL WHERE status IN ('processed', 'dead_letter')`
+	var updateArgs []any
+	argIdx := 1
+	if req.FilterEventType != "" {
+		updateSQL += fmt.Sprintf(" AND event_type = $%d", argIdx)
+		updateArgs = append(updateArgs, req.FilterEventType)
+		argIdx++
+	}
+	if req.FilterIndicatorID != "" {
+		updateSQL += fmt.Sprintf(" AND payload->>'indicator_id' = $%d", argIdx)
+		updateArgs = append(updateArgs, req.FilterIndicatorID)
+		argIdx++
+	}
+
+	tag, err := tx.Exec(ctx, updateSQL, updateArgs...)
+	if err != nil {
+		slog.Error("update_outbox_replay_failed", "error", err)
+		write(w, http.StatusInternalServerError, map[string]string{"error": "could not reset outbox events"})
+		return
+	}
+	replayedCount := int(tag.RowsAffected())
+
+	_, err = tx.Exec(ctx, `
+		UPDATE outbox_replay_audit
+		SET status = 'completed', events_replayed_count = $1, completed_at = clock_timestamp()
+		WHERE id = $2
+	`, replayedCount, replayID)
+	if err != nil {
+		slog.Error("finalize_replay_audit_failed", "error", err)
+		write(w, http.StatusInternalServerError, map[string]string{"error": "could not finalize replay audit"})
+		return
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		slog.Error("tx_commit_replay_failed", "error", err)
+		write(w, http.StatusInternalServerError, map[string]string{"error": "could not commit replay transaction"})
+		return
+	}
+
+	slog.Info("outbox_replay_dispatched", "replay_id", replayID, "reason", req.Reason, "replayed_count", replayedCount)
+
+	write(w, http.StatusAccepted, map[string]any{
+		"meta": map[string]any{
+			"audit_policy": "constitution-1.3-operational-replay",
+		},
+		"data": map[string]any{
+			"replay_id":             replayID,
+			"status":                "completed",
+			"events_replayed_count": replayedCount,
+			"reason":                strings.TrimSpace(req.Reason),
+			"triggered_by":          triggeredBy,
+		},
+	})
+}
+
+func (a *API) handleGetReplayAudit(w http.ResponseWriter, r *http.Request, ctx context.Context, meta map[string]any, replayID string) {
+	if a.db == nil {
+		write(w, http.StatusServiceUnavailable, map[string]string{"error": "database unavailable"})
+		return
+	}
+	var data json.RawMessage
+	err := a.db.QueryRow(ctx, `SELECT to_jsonb(r) FROM outbox_replay_audit r WHERE id = $1`, replayID).Scan(&data)
+	if err != nil {
+		write(w, http.StatusNotFound, map[string]string{"error": "replay audit not found"})
+		return
+	}
+	write(w, http.StatusOK, map[string]any{"meta": meta, "data": data})
+}
+
 func (a *API) handle(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
@@ -271,6 +409,10 @@ func (a *API) handle(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		if r.URL.Path == "/v1/simulations/fiscal" {
 			a.handleCreateSimulation(w, r, ctx)
+			return
+		}
+		if r.URL.Path == "/v1/admin/outbox/replay" {
+			a.handleOutboxReplay(w, r, ctx)
 			return
 		}
 		w.Header().Set("Allow", "GET")
@@ -311,6 +453,17 @@ func (a *API) handle(w http.ResponseWriter, r *http.Request) {
 
 	if r.URL.Path == "/v1/institutions" {
 		a.handleGetInstitutions(w, r, ctx, meta)
+		return
+	}
+
+	if r.URL.Path == "/v1/health/sources" {
+		a.handleGetSourceHealth(w, r, ctx, meta)
+		return
+	}
+
+	if strings.HasPrefix(r.URL.Path, "/v1/admin/outbox/replay/") {
+		replayID := strings.TrimPrefix(r.URL.Path, "/v1/admin/outbox/replay/")
+		a.handleGetReplayAudit(w, r, ctx, meta, replayID)
 		return
 	}
 

@@ -53,7 +53,33 @@ sim_get = get(f'/v1/simulations/fiscal/{sim_id}')
 assert sim_get['data']['simulation_id'] == sim_id
 assert sim_get['data']['base_debt_pct'] == 78.5
 
+# Verificações do Incremento 02: Saúde Operacional, Agendamentos e Replay
+sources_health = get('/v1/health/sources')['data']
+assert len(sources_health) >= 3
+ipca_sched = next(s for s in sources_health if s['indicator_id'] == 'br.ipca.monthly')
+assert ipca_sched['primary_source'] == 'IBGE_SIDRA'
+assert ipca_sched['fallback_source'] == 'BCB_SGS'
+
+# Replay sem justificativa: rejeitado com 400
+bad_replay = requests.post(base+'/v1/admin/outbox/replay', json={'reason': '   '}, timeout=10)
+assert bad_replay.status_code == 400
+
+# Replay com justificativa: aceito com 202
+good_replay = requests.post(base+'/v1/admin/outbox/replay', json={
+    'reason': 'Teste automatizado de fumaça para replay de outbox',
+    'triggered_by': 'smoke-test'
+}, timeout=10)
+assert good_replay.status_code == 202
+replay_id = good_replay.json()['data']['replay_id']
+assert replay_id.startswith('replay-')
+
+# Consulta do registro de auditoria do replay
+replay_get = get(f'/v1/admin/outbox/replay/{replay_id}')['data']
+assert replay_get['id'] == replay_id
+assert replay_get['status'] == 'completed'
+assert replay_get['triggered_by'] == 'smoke-test'
+
 real=get('/v1/observations')['data']
 assert all(o['quality_status']=='provisional' for o in real)
 assert get('/v1/observations')['meta']['mode']=='source'
-print(f'API smoke passed: 6 synthetic points, 3 scenarios, 3 alerts, 7 institutions, dynamic simulations verified; {len(real)} provisional source points')
+print(f'API smoke passed: 6 synthetic points, 3 scenarios, 3 alerts, 7 institutions, dynamic simulations, source health ({len(sources_health)} schedules) and outbox replay verified; {len(real)} provisional source points')
