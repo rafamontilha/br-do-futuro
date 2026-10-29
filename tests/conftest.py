@@ -14,6 +14,8 @@ def db():
         conn.execute(Path("db/002_dynamic_and_institutional.sql").read_text())
         conn.execute(Path("db/003_source_schedules_and_replay.sql").read_text())
         conn.execute(Path("db/004_proposals_and_guidance.sql").read_text())
-        conn.execute("TRUNCATE alert,scenario_run,outbox,observation,vintage,ingestion_run,raw_capture,dynamic_simulations,outbox_replay_audit,public_proposals,guidance_commitments,fiscal_calibrations CASCADE")
+        conn.execute(Path("db/005_audit_logs_and_security.sql").read_text())
+        conn.execute("TRUNCATE alert,scenario_run,outbox,observation,vintage,ingestion_run,raw_capture,dynamic_simulations,outbox_replay_audit,public_proposals,guidance_commitments,fiscal_calibrations,system_api_keys,decision_audit_log CASCADE")
         conn.execute(Path("db/004_proposals_and_guidance.sql").read_text())
+        conn.execute(Path("db/005_audit_logs_and_security.sql").read_text())
     return dsn

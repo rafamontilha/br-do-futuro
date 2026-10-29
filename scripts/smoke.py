@@ -60,15 +60,25 @@ ipca_sched = next(s for s in sources_health if s['indicator_id'] == 'br.ipca.mon
 assert ipca_sched['primary_source'] == 'IBGE_SIDRA'
 assert ipca_sched['fallback_source'] == 'BCB_SGS'
 
-# Replay sem justificativa: rejeitado com 400
-bad_replay = requests.post(base+'/v1/admin/outbox/replay', json={'reason': '   '}, timeout=10)
+# Replay sem autenticação: rejeitado com 401
+unauth_replay = requests.post(base+'/v1/admin/outbox/replay', json={'reason': 'teste'}, timeout=10)
+assert unauth_replay.status_code == 401
+
+# Replay com papel produtor: rejeitado com 403
+forbidden_replay = requests.post(base+'/v1/admin/outbox/replay', json={'reason': 'teste'},
+    headers={'Authorization': 'Bearer bdf-producer-token-2026'}, timeout=10)
+assert forbidden_replay.status_code == 403
+
+# Replay com token revisor sem justificativa: rejeitado com 400
+bad_replay = requests.post(base+'/v1/admin/outbox/replay', json={'reason': '   '},
+    headers={'Authorization': 'Bearer bdf-reviewer-token-2026'}, timeout=10)
 assert bad_replay.status_code == 400
 
-# Replay com justificativa: aceito com 202
+# Replay com justificativa e token revisor: aceito com 202
 good_replay = requests.post(base+'/v1/admin/outbox/replay', json={
     'reason': 'Teste automatizado de fumaça para replay de outbox',
     'triggered_by': 'smoke-test'
-}, timeout=10)
+}, headers={'Authorization': 'Bearer bdf-reviewer-token-2026'}, timeout=10)
 assert good_replay.status_code == 202
 replay_id = good_replay.json()['data']['replay_id']
 assert replay_id.startswith('replay-')
@@ -113,7 +123,67 @@ calibrations = get('/v1/scenarios/calibrations')['data']
 assert len(calibrations) >= 4
 assert all(c['scenario_id'] in ('continuity', 'alternative', 'adverse') for c in calibrations)
 
+# Verificações do Incremento 04: Auditoria, RBAC, Rate Limiting, Paginação e Observabilidade
+# 1. Auditoria sem credenciais: 401
+unauth_audit = requests.post(base+'/v1/admin/audit/decisions', json={'action': 'test'}, timeout=10)
+assert unauth_audit.status_code == 401
+
+# 2. Auditoria com papel produtor: 403
+prod_audit = requests.post(base+'/v1/admin/audit/decisions', json={'action': 'test'},
+    headers={'Authorization': 'Bearer bdf-producer-token-2026'}, timeout=10)
+assert prod_audit.status_code == 403
+
+# 3. Auditoria com papel revisor: 201 Created
+audit_res = requests.post(base+'/v1/admin/audit/decisions', json={
+    'action': 'approve_calibration',
+    'entity_type': 'fiscal_calibration',
+    'entity_id': 'calib-primary-surplus-v1',
+    'justification': 'Homologação técnica de fumaça da calibração fiscal',
+    'new_state': {'status': 'reviewed', 'smoke_verified': True}
+}, headers={'Authorization': 'Bearer bdf-reviewer-token-2026'}, timeout=10)
+assert audit_res.status_code == 201
+audit_data = audit_res.json()['data']
+assert audit_data['status'] == 'recorded'
+assert len(audit_data['payload_hash']) == 64
+assert len(audit_data['prev_log_hash']) == 64
+
+# 4. Consulta paginada da trilha de auditoria
+audit_list_res = requests.get(base+'/v1/admin/audit/decisions?limit=5',
+    headers={'Authorization': 'Bearer bdf-reviewer-token-2026'}, timeout=10)
+assert audit_list_res.status_code == 200
+audit_list = audit_list_res.json()
+assert 'pagination' in audit_list['meta']
+assert len(audit_list['data']) >= 2
+
+# 5. Rate limiting com cabeçalhos RFC
+rl_headers = {'X-Test-Rate-Limit-RPM': '2'}
+r1 = requests.get(base+'/v1/indicators', headers=rl_headers, timeout=10)
+assert r1.status_code == 200
+assert 'X-RateLimit-Limit' in r1.headers
+r2 = requests.get(base+'/v1/indicators', headers=rl_headers, timeout=10)
+assert r2.status_code == 200
+r3 = requests.get(base+'/v1/indicators', headers=rl_headers, timeout=10)
+assert r3.status_code == 429
+assert 'Retry-After' in r3.headers
+
+# 6. Paginação padronizada em /v1/observations
+paged_obs_res = requests.get(base+'/v1/observations?mode=fixture&limit=2&offset=0', timeout=10)
+assert paged_obs_res.status_code == 200
+paged_obs = paged_obs_res.json()
+assert len(paged_obs['data']) == 2
+assert paged_obs['meta']['pagination']['limit'] == 2
+assert paged_obs['meta']['pagination']['total'] == 6
+assert paged_obs['meta']['pagination']['has_more'] is True
+
+# 7. Telemetria dos 4 planos em /v1/observability/metrics
+obs_metrics = get('/v1/observability/metrics')['data']
+assert obs_metrics['platform']['database_status'] in ('healthy', 'unconfigured')
+assert obs_metrics['data']['tracked_series_count'] >= 12
+assert obs_metrics['models']['active_scenarios_count'] >= 3
+assert obs_metrics['decisions']['audit_chain_intact'] is True
+assert obs_metrics['slo_compliance']['source_window_compliance_pct'] >= 99.0
+
 real=get('/v1/observations')['data']
 assert all(o['quality_status']=='provisional' for o in real)
 assert get('/v1/observations')['meta']['mode']=='source'
-print(f'API smoke passed: 6 synthetic points, 3 scenarios, 3 alerts, 7 institutions, dynamic simulations, source health ({len(sources_health)} schedules), outbox replay, {len(proposals)} proposals, {len(commitments)} guidance commitments and {len(calibrations)} calibrations verified; {len(real)} provisional source points')
+print(f'API smoke passed: 6 synthetic points, 3 scenarios, 3 alerts, 7 institutions, dynamic simulations, source health ({len(sources_health)} schedules), outbox replay, {len(proposals)} proposals, {len(commitments)} guidance commitments, {len(calibrations)} calibrations, RBAC auth, rate limiting, pagination and 4-plane observability verified; {len(real)} provisional source points')
