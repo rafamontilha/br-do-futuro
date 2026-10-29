@@ -74,7 +74,7 @@ def main():
         session = requests.Session()
         session.mount("https://", HTTPAdapter(max_retries=Retry(total=3, backoff_factor=1,
                       status_forcelist=[429, 500, 502, 503, 504], allowed_methods=["GET"])))
-        use_ibge = (args.source == "ibge") or (args.indicator == "br.ipca.monthly" and args.source != "bcb")
+        use_ibge = (args.source == "ibge") or (args.indicator in ("br.ipca.monthly", "br.gdp.quarterly_yoy", "br.labor.unemployment_rate") and args.source != "bcb")
         if use_ibge and args.indicator == "br.ipca.monthly":
             from .sources.ibge import fetch_ipca
             # Calculate periods format for SIDRA (YYYYMM-YYYYMM)
@@ -83,6 +83,24 @@ def main():
             period_arg = f"{start_p}-{end_p}" if start_p != end_p else start_p
             try:
                 content, url = fetch_ipca(periods=period_arg, session=session)
+            except requests.RequestException:
+                logging.error(json.dumps(dict(event="source_unavailable", indicator_id=args.indicator,
+                                              source="IBGE_SIDRA", checked_at=datetime.now().astimezone().isoformat())))
+                raise SystemExit(1)
+            result = ingest(dsn, args.indicator, content, url, mode="source")
+        elif use_ibge and args.indicator in ("br.gdp.quarterly_yoy", "br.labor.unemployment_rate"):
+            start_q = (args.start.month - 1) // 3 + 1
+            end_q = (args.end.month - 1) // 3 + 1
+            start_p = f"{args.start.year}{start_q:02d}"
+            end_p = f"{args.end.year}{end_q:02d}"
+            period_arg = f"{start_p}-{end_p}" if start_p != end_p else start_p
+            try:
+                if args.indicator == "br.gdp.quarterly_yoy":
+                    from .sources.ibge import fetch_sidra_gdp
+                    content, url = fetch_sidra_gdp(periods=period_arg, session=session)
+                else:
+                    from .sources.ibge import fetch_sidra_unemployment
+                    content, url = fetch_sidra_unemployment(periods=period_arg, session=session)
             except requests.RequestException:
                 logging.error(json.dumps(dict(event="source_unavailable", indicator_id=args.indicator,
                                               source="IBGE_SIDRA", checked_at=datetime.now().astimezone().isoformat())))

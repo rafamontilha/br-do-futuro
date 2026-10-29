@@ -27,8 +27,9 @@ def validate(body, indicator):
 
     # If first element has D2C or resultados, it is an IBGE response (SIDRA or Agregados)
     if isinstance(rows[0], dict) and ("D2C" in rows[0] or "resultados" in rows[0]):
-        from .sources.ibge import parse_ibge_ipca
-        return parse_ibge_ipca(body)
+        from .sources.ibge import parse_ibge_sidra
+        freq = indicator.get("frequency", "monthly")
+        return parse_ibge_sidra(body, frequency=freq)
 
     result, seen = [], set()
     for row in rows:
