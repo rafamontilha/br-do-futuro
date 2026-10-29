@@ -5,6 +5,7 @@ Testes unitários e de integração para validação da trilha imutável de audi
 (decision_audit_log) e encadeamento criptográfico SHA-256 no Brasil do Futuro (Incremento 04).
 """
 
+import copy
 import hashlib
 import json
 from pathlib import Path
@@ -14,8 +15,20 @@ import psycopg
 import pytest
 
 GENESIS_PREV_LOG_HASH = "0" * 64
-GENESIS_PAYLOAD = {"status": "initialized", "version": "v1.4"}
-GENESIS_PAYLOAD_HASH = "fa57e04f83fac28110ef3c82f4141d85eaf5858788cf7b6dbbc9f85ff91f0a9a"
+GENESIS_RECORD = {
+    "action": "initialize_audit_ledger",
+    "actor_id": "system-genesis",
+    "actor_role": "system",
+    "entity_id": "bdf-foundation",
+    "entity_type": "system",
+    "event_id": None,
+    "id": "audit-genesis-0000",
+    "justification": "Gênese da trilha imutável de auditoria de decisões do Brasil do Futuro (Incremento 04)",
+    "new_state": {"status": "initialized", "version": "v1.4"},
+    "prev_log_hash": GENESIS_PREV_LOG_HASH,
+    "previous_state": None,
+}
+GENESIS_PAYLOAD_HASH = "af9fe7ed02660efdca8dfbcd16d0c9b300a92259e40671fd6b4ef18d7708975c"
 
 ALLOWED_ACTOR_ROLES = frozenset({"producer", "reviewer", "publisher", "system"})
 UNAUTHORIZED_ROLES = [
@@ -30,10 +43,58 @@ UNAUTHORIZED_ROLES = [
 ]
 
 
-def compute_payload_hash(payload: Any) -> str:
-    """Calcula deterministamente o hash SHA-256 de um payload canônico de auditoria."""
-    canonical_json = json.dumps(payload, sort_keys=True)
+def compute_payload_hash(record_or_payload: Any) -> str:
+    """Calcula deterministamente o hash SHA-256 de um registro canônico completo ou payload de auditoria."""
+    if isinstance(record_or_payload, dict) and "action" in record_or_payload and "actor_role" in record_or_payload:
+        canonical = {
+            "action": record_or_payload.get("action"),
+            "actor_id": record_or_payload.get("actor_id"),
+            "actor_role": record_or_payload.get("actor_role"),
+            "entity_id": record_or_payload.get("entity_id"),
+            "entity_type": record_or_payload.get("entity_type"),
+            "event_id": record_or_payload.get("event_id"),
+            "id": record_or_payload.get("id"),
+            "justification": record_or_payload.get("justification"),
+            "new_state": record_or_payload.get("new_state"),
+            "prev_log_hash": record_or_payload.get("prev_log_hash"),
+            "previous_state": record_or_payload.get("previous_state"),
+        }
+        canonical_json = json.dumps(canonical, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        return hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
+
+    canonical_json = json.dumps(record_or_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
+
+
+def make_valid_record(
+    id: str,
+    actor_role: str,
+    action: str,
+    new_state: Any,
+    prev_log_hash: str,
+    actor_id: str = "actor-01",
+    entity_type: str = "proposal",
+    entity_id: str = "entity-01",
+    justification: str = "Justificativa padrão",
+    event_id: str | None = None,
+    previous_state: Any = None,
+) -> dict[str, Any]:
+    """Constrói um registro canônico válido com o hash calculado sobre todos os campos."""
+    rec = {
+        "action": action,
+        "actor_id": actor_id,
+        "actor_role": actor_role,
+        "entity_id": entity_id,
+        "entity_type": entity_type,
+        "event_id": event_id,
+        "id": id,
+        "justification": justification,
+        "new_state": new_state,
+        "prev_log_hash": prev_log_hash,
+        "previous_state": previous_state,
+    }
+    rec["payload_hash"] = compute_payload_hash(rec)
+    return rec
 
 
 def validate_actor_role(role: str) -> bool:
@@ -50,7 +111,7 @@ def verify_audit_chain(records: list[dict[str, Any]], raise_on_error: bool = Tru
     Valida a integridade da cadeia de auditoria de decisões.
     - Registro gênese (índice 0): prev_log_hash DEVE ser 64 zeros ('0' * 64).
     - Registros subsequentes (índice N): prev_log_hash DEVE ser igual a payload_hash do registro N-1.
-    - Em cada registro: payload_hash DEVE corresponder a compute_payload_hash(new_state).
+    - Em cada registro: payload_hash DEVE corresponder a compute_payload_hash(record).
     - Em cada registro: actor_role DEVE ser um dos papéis permitidos.
     """
     if not records:
@@ -65,9 +126,8 @@ def verify_audit_chain(records: list[dict[str, Any]], raise_on_error: bool = Tru
                 raise AssertionError(msg)
             return False
 
-        # Validação de integridade do payload atual
-        new_state = record.get("new_state")
-        expected_payload_hash = compute_payload_hash(new_state)
+        # Validação de integridade do registro completo
+        expected_payload_hash = compute_payload_hash(record)
         actual_payload_hash = record.get("payload_hash")
         if actual_payload_hash != expected_payload_hash:
             msg = (
@@ -108,8 +168,8 @@ def verify_audit_chain(records: list[dict[str, Any]], raise_on_error: bool = Tru
 # ==============================================================================
 
 def test_deterministic_sha256_canonical_genesis_payload():
-    """Valida que o cálculo de SHA-256 para o payload gênese produz o hash exato da migração 005."""
-    computed = compute_payload_hash(GENESIS_PAYLOAD)
+    """Valida que o cálculo de SHA-256 para o registro canônico gênese completo produz o hash exato da migração 005."""
+    computed = compute_payload_hash(GENESIS_RECORD)
     assert computed == GENESIS_PAYLOAD_HASH
     assert len(computed) == 64
     assert all(c in "0123456789abcdef" for c in computed)
@@ -149,7 +209,7 @@ def test_sha256_nested_structures_determinism():
     hash2 = compute_payload_hash(complex_payload)
     assert hash1 == hash2
 
-    # Pequena modificação em campo aninhado produz hash diferente (efeito avalanche)
+    # Modificação em campo aninhado produz hash diferente (efeito avalanche)
     modified_payload = json.loads(json.dumps(complex_payload))
     modified_payload["parameters"]["interest_rate"] = 0.106
     hash_modified = compute_payload_hash(modified_payload)
@@ -166,7 +226,6 @@ def test_sha256_avalanche_effect():
     h_tampered = compute_payload_hash(tampered)
 
     assert h_base != h_tampered
-    # Não deve haver prefixo comum longo
     common_prefix_len = 0
     for a, b in zip(h_base, h_tampered):
         if a == b:
@@ -188,54 +247,52 @@ def test_genesis_record_prev_log_hash_is_64_zeros():
 
 def test_sequential_audit_chain_links():
     """Valida uma cadeia sequencial íntegra de múltiplos registros encadeados."""
-    rec0 = {
-        "id": "audit-genesis-0000",
-        "actor_role": "system",
-        "action": "initialize_audit_ledger",
-        "new_state": GENESIS_PAYLOAD,
-        "payload_hash": compute_payload_hash(GENESIS_PAYLOAD),
-        "prev_log_hash": GENESIS_PREV_LOG_HASH,
-    }
+    rec0 = copy.deepcopy(GENESIS_RECORD)
+    rec0["payload_hash"] = compute_payload_hash(rec0)
 
-    state1 = {"status": "ingested", "series": "br.ipca.monthly", "vintage": "2026-10"}
-    rec1 = {
-        "id": "audit-dec-20261029-001",
-        "actor_role": "producer",
-        "action": "ingest_vintage",
-        "new_state": state1,
-        "payload_hash": compute_payload_hash(state1),
-        "prev_log_hash": rec0["payload_hash"],
-    }
+    rec1 = make_valid_record(
+        id="audit-dec-20261029-001",
+        actor_role="producer",
+        action="ingest_vintage",
+        new_state={"status": "ingested", "series": "br.ipca.monthly", "vintage": "2026-10"},
+        prev_log_hash=rec0["payload_hash"],
+        actor_id="user-producer-01",
+        entity_type="vintage",
+        entity_id="vintage-2026-10",
+        justification="Ingestão mensal oficial",
+    )
 
-    state2 = {"status": "approved", "calibration": "fiscal-2026-v2"}
-    rec2 = {
-        "id": "audit-dec-20261029-002",
-        "actor_role": "reviewer",
-        "action": "approve_calibration",
-        "new_state": state2,
-        "payload_hash": compute_payload_hash(state2),
-        "prev_log_hash": rec1["payload_hash"],
-    }
+    rec2 = make_valid_record(
+        id="audit-dec-20261029-002",
+        actor_role="reviewer",
+        action="approve_calibration",
+        new_state={"status": "approved", "calibration": "fiscal-2026-v2"},
+        prev_log_hash=rec1["payload_hash"],
+        actor_id="user-reviewer-01",
+        entity_type="calibration",
+        entity_id="fiscal-2026-v2",
+        justification="Homologação técnica",
+    )
 
-    state3 = {"status": "published", "guidance": "comm-debt-stabilization-2030"}
-    rec3 = {
-        "id": "audit-dec-20261029-003",
-        "actor_role": "publisher",
-        "action": "publish_guidance",
-        "new_state": state3,
-        "payload_hash": compute_payload_hash(state3),
-        "prev_log_hash": rec2["payload_hash"],
-    }
+    rec3 = make_valid_record(
+        id="audit-dec-20261029-003",
+        actor_role="publisher",
+        action="publish_guidance",
+        new_state={"status": "published", "guidance": "comm-debt-stabilization-2030"},
+        prev_log_hash=rec2["payload_hash"],
+        actor_id="user-publisher-01",
+        entity_type="guidance",
+        entity_id="comm-debt-stabilization-2030",
+        justification="Publicação de meta",
+    )
 
     chain = [rec0, rec1, rec2, rec3]
 
-    # Verifica cada elo diretamente
     assert rec0["prev_log_hash"] == "0" * 64
     assert rec1["prev_log_hash"] == rec0["payload_hash"]
     assert rec2["prev_log_hash"] == rec1["payload_hash"]
     assert rec3["prev_log_hash"] == rec2["payload_hash"]
 
-    # Validação completa da cadeia
     assert verify_audit_chain(chain, raise_on_error=True) is True
     assert verify_audit_chain(chain, raise_on_error=False) is True
 
@@ -247,35 +304,55 @@ def test_sequential_audit_chain_links():
 @pytest.fixture
 def sample_valid_chain():
     """Fixture que retorna uma cópia de cadeia de 3 registros válida."""
-    rec0 = {
-        "id": "audit-genesis-0000",
-        "actor_role": "system",
-        "new_state": {"genesis": True},
-        "payload_hash": compute_payload_hash({"genesis": True}),
-        "prev_log_hash": GENESIS_PREV_LOG_HASH,
-    }
-    rec1 = {
-        "id": "audit-001",
-        "actor_role": "producer",
-        "new_state": {"spending_approved_brl": 500_000_000},
-        "payload_hash": compute_payload_hash({"spending_approved_brl": 500_000_000}),
-        "prev_log_hash": rec0["payload_hash"],
-    }
-    rec2 = {
-        "id": "audit-002",
-        "actor_role": "reviewer",
-        "new_state": {"reviewed": True},
-        "payload_hash": compute_payload_hash({"reviewed": True}),
-        "prev_log_hash": rec1["payload_hash"],
-    }
+    rec0 = copy.deepcopy(GENESIS_RECORD)
+    rec0["payload_hash"] = compute_payload_hash(rec0)
+
+    rec1 = make_valid_record(
+        id="audit-001",
+        actor_role="producer",
+        action="ingest_vintage",
+        new_state={"spending_approved_brl": 500_000_000},
+        prev_log_hash=rec0["payload_hash"],
+        actor_id="user-producer-01",
+        justification="Autorização inicial de desembolso",
+    )
+
+    rec2 = make_valid_record(
+        id="audit-002",
+        actor_role="reviewer",
+        action="approve_calibration",
+        new_state={"reviewed": True},
+        prev_log_hash=rec1["payload_hash"],
+        actor_id="user-reviewer-01",
+        justification="Parecer metodológico favorável",
+    )
     return [rec0, rec1, rec2]
 
 
 def test_tampering_retroactive_payload_modification_fails(sample_valid_chain):
     """Adulteração de payload intermediário (new_state) é detectada imediatamente."""
     chain = sample_valid_chain
-    # Atacante altera retroativamente o valor de gasto aprovado sem conseguir falsificar o hash
     chain[1]["new_state"] = {"spending_approved_brl": 999_999_999}
+
+    assert verify_audit_chain(chain, raise_on_error=False) is False
+    with pytest.raises(AssertionError, match="Payload hash mismatch at index 1"):
+        verify_audit_chain(chain, raise_on_error=True)
+
+
+def test_tampering_retroactive_justification_modification_fails(sample_valid_chain):
+    """Adulteração de justificativa técnica em registro é detectada pelo hash canônico."""
+    chain = sample_valid_chain
+    chain[1]["justification"] = "Justificativa adulterada sem autorização"
+
+    assert verify_audit_chain(chain, raise_on_error=False) is False
+    with pytest.raises(AssertionError, match="Payload hash mismatch at index 1"):
+        verify_audit_chain(chain, raise_on_error=True)
+
+
+def test_tampering_retroactive_actor_modification_fails(sample_valid_chain):
+    """Adulteração de actor_id em registro é detectada pelo hash canônico."""
+    chain = sample_valid_chain
+    chain[1]["actor_id"] = "user-impersonator"
 
     assert verify_audit_chain(chain, raise_on_error=False) is False
     with pytest.raises(AssertionError, match="Payload hash mismatch at index 1"):
@@ -285,9 +362,8 @@ def test_tampering_retroactive_payload_modification_fails(sample_valid_chain):
 def test_tampering_payload_hash_altered_breaks_chain(sample_valid_chain):
     """Se o atacante recalcular o payload_hash do registro N, quebra o encadeamento no registro N+1."""
     chain = sample_valid_chain
-    forged_state = {"spending_approved_brl": 999_999_999}
-    chain[1]["new_state"] = forged_state
-    chain[1]["payload_hash"] = compute_payload_hash(forged_state)  # atualizou o próprio hash
+    chain[1]["new_state"] = {"spending_approved_brl": 999_999_999}
+    chain[1]["payload_hash"] = compute_payload_hash(chain[1])
 
     # O registro 2 ainda aponta para o payload_hash anterior -> cadeia quebrada
     assert verify_audit_chain(chain, raise_on_error=False) is False
@@ -301,7 +377,7 @@ def test_tampering_prev_log_hash_modification_fails(sample_valid_chain):
     chain[2]["prev_log_hash"] = "deadbeef" * 8
 
     assert verify_audit_chain(chain, raise_on_error=False) is False
-    with pytest.raises(AssertionError, match="Chain broken at index 2"):
+    with pytest.raises(AssertionError, match="Payload hash mismatch at index 2"):
         verify_audit_chain(chain, raise_on_error=True)
 
 
@@ -311,7 +387,7 @@ def test_tampering_genesis_prev_log_hash_fails(sample_valid_chain):
     chain[0]["prev_log_hash"] = "1" * 64
 
     assert verify_audit_chain(chain, raise_on_error=False) is False
-    with pytest.raises(AssertionError, match="Genesis record at index 0 must have prev_log_hash equal to 64 zeros"):
+    with pytest.raises(AssertionError, match="Payload hash mismatch at index 0"):
         verify_audit_chain(chain, raise_on_error=True)
 
 
@@ -366,11 +442,8 @@ def test_migration_005_sql_schema_enforces_roles():
     assert sql_path.exists(), "db/005_audit_logs_and_security.sql must exist"
     content = sql_path.read_text(encoding="utf-8")
 
-    # Verifica CHECK constraint na tabela decision_audit_log
     assert "CREATE TABLE IF NOT EXISTS decision_audit_log" in content
     assert "CHECK (actor_role IN ('producer', 'reviewer', 'publisher', 'system'))" in content
-
-    # Verifica CHECK constraint na tabela system_api_keys
     assert "CREATE TABLE IF NOT EXISTS system_api_keys" in content
     assert "CHECK (role IN ('producer', 'reviewer', 'publisher'))" in content
 
@@ -383,75 +456,118 @@ def test_database_genesis_record_exists_and_valid(db):
     """Valida que o registro gênese é inserido no banco com os valores canônicos exatos."""
     with psycopg.connect(db) as conn:
         row = conn.execute("""
-            SELECT id, actor_id, actor_role, action, entity_type, entity_id,
-                   new_state, payload_hash, prev_log_hash
+            SELECT id, event_id, actor_id, actor_role, action, entity_type, entity_id,
+                   justification, previous_state, new_state, payload_hash, prev_log_hash
             FROM decision_audit_log
             WHERE id = 'audit-genesis-0000'
         """).fetchone()
 
         assert row is not None, "Registro gênese 'audit-genesis-0000' deve existir no banco de dados"
-        audit_id, actor_id, role, action, entity_type, entity_id, new_state, p_hash, prev_hash = row
+        audit_id, event_id, actor_id, role, action, entity_type, entity_id, justification, prev_state, new_state, p_hash, prev_hash = row
 
         assert role == "system"
         assert action == "initialize_audit_ledger"
         assert prev_hash == GENESIS_PREV_LOG_HASH, "prev_log_hash do gênese deve ser 64 zeros"
         assert p_hash == GENESIS_PAYLOAD_HASH
-        assert compute_payload_hash(new_state) == p_hash
+
+        canonical = {
+            "action": action,
+            "actor_id": actor_id,
+            "actor_role": role,
+            "entity_id": entity_id,
+            "entity_type": entity_type,
+            "event_id": event_id,
+            "id": audit_id,
+            "justification": justification,
+            "new_state": new_state,
+            "prev_log_hash": prev_hash,
+            "previous_state": prev_state,
+        }
+        assert compute_payload_hash(canonical) == p_hash
 
 
 def test_database_insert_chained_records_and_verify(db):
     """Testa a inserção sequencial de registros de auditoria no PostgreSQL e a verificação da cadeia."""
     with psycopg.connect(db) as conn:
-        # Recupera o registro gênese
         genesis_hash = conn.execute("""
             SELECT payload_hash FROM decision_audit_log WHERE id = 'audit-genesis-0000'
         """).fetchone()[0]
 
-        # Inserção do Registro 1: Produtor
-        state1 = {"dataset": "ibge-ipca", "vintage_id": "vintage-202610", "records_count": 120}
-        hash1 = compute_payload_hash(state1)
+        rec1 = {
+            "action": "ingest_data",
+            "actor_id": "user-producer-01",
+            "actor_role": "producer",
+            "entity_id": "vintage-202610",
+            "entity_type": "vintage",
+            "event_id": None,
+            "id": "audit-test-001",
+            "justification": "Ingestão periódica oficial de inflação",
+            "new_state": {"dataset": "ibge-ipca", "vintage_id": "vintage-202610", "records_count": 120},
+            "prev_log_hash": genesis_hash,
+            "previous_state": None,
+        }
+        hash1 = compute_payload_hash(rec1)
         conn.execute("""
             INSERT INTO decision_audit_log (
                 id, actor_id, actor_role, action, entity_type, entity_id,
                 justification, new_state, payload_hash, prev_log_hash
             ) VALUES (
-                'audit-test-001', 'user-producer-01', 'producer', 'ingest_data',
-                'vintage', 'vintage-202610', 'Ingestão periódica oficial de inflação',
-                %s::jsonb, %s, %s
+                %(id)s, %(actor_id)s, %(actor_role)s, %(action)s, %(entity_type)s, %(entity_id)s,
+                %(justification)s, %(new_state)s::jsonb, %(payload_hash)s, %(prev_log_hash)s
             )
-        """, (json.dumps(state1), hash1, genesis_hash))
+        """, {**rec1, "new_state": json.dumps(rec1["new_state"]), "payload_hash": hash1})
 
-        # Inserção do Registro 2: Revisor
-        state2 = {"target_proposal": "prop-tax-reform-neutrality", "calibrated_debt_anchor": 75.0}
-        hash2 = compute_payload_hash(state2)
+        rec2 = {
+            "action": "approve_calibration",
+            "actor_id": "user-reviewer-01",
+            "actor_role": "reviewer",
+            "entity_id": "prop-tax-reform-neutrality",
+            "entity_type": "public_proposal",
+            "event_id": None,
+            "id": "audit-test-002",
+            "justification": "Homologação metodológica de âncora fiscal",
+            "new_state": {"target_proposal": "prop-tax-reform-neutrality", "calibrated_debt_anchor": 75.0},
+            "prev_log_hash": hash1,
+            "previous_state": None,
+        }
+        hash2 = compute_payload_hash(rec2)
         conn.execute("""
             INSERT INTO decision_audit_log (
                 id, actor_id, actor_role, action, entity_type, entity_id,
                 justification, new_state, payload_hash, prev_log_hash
             ) VALUES (
-                'audit-test-002', 'user-reviewer-01', 'reviewer', 'approve_calibration',
-                'public_proposal', 'prop-tax-reform-neutrality', 'Homologação metodológica de âncora fiscal',
-                %s::jsonb, %s, %s
+                %(id)s, %(actor_id)s, %(actor_role)s, %(action)s, %(entity_type)s, %(entity_id)s,
+                %(justification)s, %(new_state)s::jsonb, %(payload_hash)s, %(prev_log_hash)s
             )
-        """, (json.dumps(state2), hash2, hash1))
+        """, {**rec2, "new_state": json.dumps(rec2["new_state"]), "payload_hash": hash2})
 
-        # Inserção do Registro 3: Publicador
-        state3 = {"commitment_id": "comm-debt-stabilization-2030", "status": "proposed_target"}
-        hash3 = compute_payload_hash(state3)
+        rec3 = {
+            "action": "publish_guidance",
+            "actor_id": "user-publisher-01",
+            "actor_role": "publisher",
+            "entity_id": "comm-debt-stabilization-2030",
+            "entity_type": "guidance_commitment",
+            "event_id": None,
+            "id": "audit-test-003",
+            "justification": "Publicação de meta após duplo parecer",
+            "new_state": {"commitment_id": "comm-debt-stabilization-2030", "status": "proposed_target"},
+            "prev_log_hash": hash2,
+            "previous_state": None,
+        }
+        hash3 = compute_payload_hash(rec3)
         conn.execute("""
             INSERT INTO decision_audit_log (
                 id, actor_id, actor_role, action, entity_type, entity_id,
                 justification, new_state, payload_hash, prev_log_hash
             ) VALUES (
-                'audit-test-003', 'user-publisher-01', 'publisher', 'publish_guidance',
-                'guidance_commitment', 'comm-debt-stabilization-2030', 'Publicação de meta após duplo parecer',
-                %s::jsonb, %s, %s
+                %(id)s, %(actor_id)s, %(actor_role)s, %(action)s, %(entity_type)s, %(entity_id)s,
+                %(justification)s, %(new_state)s::jsonb, %(payload_hash)s, %(prev_log_hash)s
             )
-        """, (json.dumps(state3), hash3, hash2))
+        """, {**rec3, "new_state": json.dumps(rec3["new_state"]), "payload_hash": hash3})
 
-        # Consulta e validação de todos os registros em ordem cronológica
         rows = conn.execute("""
-            SELECT id, actor_role, new_state, payload_hash, prev_log_hash
+            SELECT id, event_id, actor_id, actor_role, action, entity_type, entity_id,
+                   justification, previous_state, new_state, payload_hash, prev_log_hash
             FROM decision_audit_log
             ORDER BY created_at ASC, id ASC
         """).fetchall()
@@ -459,10 +575,17 @@ def test_database_insert_chained_records_and_verify(db):
         chain = [
             {
                 "id": r[0],
-                "actor_role": r[1],
-                "new_state": r[2],
-                "payload_hash": r[3],
-                "prev_log_hash": r[4],
+                "event_id": r[1],
+                "actor_id": r[2],
+                "actor_role": r[3],
+                "action": r[4],
+                "entity_type": r[5],
+                "entity_id": r[6],
+                "justification": r[7],
+                "previous_state": r[8],
+                "new_state": r[9],
+                "payload_hash": r[10],
+                "prev_log_hash": r[11],
             }
             for r in rows
         ]
@@ -477,7 +600,6 @@ def test_database_primary_key_uniqueness_enforced(db):
         state = {"test": "duplicate_key"}
         h = compute_payload_hash(state)
 
-        # Tentativa de reinserir o id 'audit-genesis-0000'
         with pytest.raises(psycopg.errors.UniqueViolation):
             conn.execute("""
                 INSERT INTO decision_audit_log (

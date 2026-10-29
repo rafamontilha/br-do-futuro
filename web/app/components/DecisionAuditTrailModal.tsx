@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { RoleType, ROLES } from "./RoleSwitcherBadge";
 
 export interface DecisionAuditRecord {
@@ -26,30 +26,15 @@ interface DecisionAuditTrailModalProps {
   initialRecords?: DecisionAuditRecord[];
 }
 
-const defaultRecords: DecisionAuditRecord[] = [
-  {
-    id: "audit-genesis-0000",
-    event_id: null,
-    actor_id: "system-genesis",
-    actor_role: "system",
-    action: "initialize_audit_ledger",
-    entity_type: "system",
-    entity_id: "bdf-foundation",
-    justification: "Gênese da trilha imutável de auditoria de decisões do Brasil do Futuro (Incremento 04)",
-    new_state: { status: "initialized", version: "v1.4" },
-    payload_hash: "fa57e04f83fac28110ef3c82f4141d85eaf5858788cf7b6dbbc9f85ff91f0a9a",
-    prev_log_hash: "0000000000000000000000000000000000000000000000000000000000000000",
-    created_at: "2026-10-29T10:00:00Z",
-  },
-];
-
 export function DecisionAuditTrailModal({
   isOpen,
   onClose,
   currentRole,
-  initialRecords = defaultRecords,
+  initialRecords,
 }: DecisionAuditTrailModalProps) {
-  const [records, setRecords] = useState<DecisionAuditRecord[]>(initialRecords);
+  const [records, setRecords] = useState<DecisionAuditRecord[]>(initialRecords || []);
+  const [isLoading, setIsLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
   const [action, setAction] = useState("approve_calibration");
   const [entityType, setEntityType] = useState("fiscal_calibration");
@@ -58,10 +43,49 @@ export function DecisionAuditTrailModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
 
-  if (!isOpen) return null;
-
   const roleConfig = ROLES[currentRole];
-  const canRecordDecision = currentRole === "reviewer" || currentRole === "publisher";
+  const canAccessAudit = currentRole === "reviewer" || currentRole === "publisher";
+
+  const fetchRecords = async () => {
+    if (!canAccessAudit) {
+      setRecords([]);
+      setFetchError(null);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setFetchError(null);
+
+    try {
+      const res = await fetch("/api/v1/admin/audit/decisions", {
+        headers: {
+          "Authorization": roleConfig.token ? `Bearer ${roleConfig.token}` : "",
+          "X-Actor-Role": currentRole,
+        },
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+
+      const json = await res.json();
+      setRecords(json.data || []);
+    } catch (err: any) {
+      setFetchError(err.message || "Erro de comunicação com o serviço de auditoria");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchRecords();
+    }
+  }, [isOpen, currentRole]);
+
+  if (!isOpen) return null;
 
   const handleRecordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,47 +121,16 @@ export function DecisionAuditTrailModal({
       });
 
       if (res.ok) {
-        const json = await res.json();
-        const newRecord: DecisionAuditRecord = {
-          id: json.data?.id || `audit-dec-${Date.now()}`,
-          actor_id: roleConfig.roleName,
-          actor_role: currentRole,
-          action,
-          entity_type: entityType,
-          entity_id: entityId,
-          justification: justification.trim(),
-          payload_hash: json.data?.payload_hash || "sha256-hash-calculated",
-          prev_log_hash: records[0]?.payload_hash || "0000000000000000000000000000000000000000000000000000000000000000",
-          new_state: payload.new_state,
-          created_at: new Date().toISOString(),
-        };
-        setRecords([newRecord, ...records]);
         setJustification("");
         setShowNewForm(false);
         setSubmitMessage("Decisão registrada com sucesso na trilha imutável!");
+        await fetchRecords();
       } else {
         const errJson = await res.json().catch(() => ({}));
         alert(`Erro ao registrar decisão: ${errJson.error || res.statusText}`);
       }
-    } catch {
-      // Fallback local se a API estiver em modo estático/desconectado
-      const simulatedRecord: DecisionAuditRecord = {
-        id: `audit-dec-${Date.now()}`,
-        actor_id: roleConfig.roleName,
-        actor_role: currentRole,
-        action,
-        entity_type: entityType,
-        entity_id: entityId,
-        justification: justification.trim(),
-        payload_hash: "a4f8e219bc82d091e457f9208a01f93847291840294820194820194820194820",
-        prev_log_hash: records[0]?.payload_hash || "0000000000000000000000000000000000000000000000000000000000000000",
-        new_state: payload.new_state,
-        created_at: new Date().toISOString(),
-      };
-      setRecords([simulatedRecord, ...records]);
-      setJustification("");
-      setShowNewForm(false);
-      setSubmitMessage("Decisão gravada localmente na trilha de auditoria.");
+    } catch (err: any) {
+      alert(`Falha de conexão com a API de auditoria: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -201,7 +194,7 @@ export function DecisionAuditTrailModal({
                   borderRadius: "4px",
                 }}
               >
-                Cadeia de Hashes Íntegra (SHA-256)
+                Cadeia de Hashes Criptográficos (SHA-256)
               </span>
             </div>
             <p style={{ margin: "4px 0 0 0", fontSize: "12.5px", color: "var(--muted, #52675d)" }}>
@@ -237,7 +230,7 @@ export function DecisionAuditTrailModal({
             <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--ink, #15342d)" }}>
               Eventos Registrados ({records.length})
             </span>
-            {canRecordDecision ? (
+            {canAccessAudit ? (
               <button
                 onClick={() => setShowNewForm(!showNewForm)}
                 style={{
@@ -253,15 +246,55 @@ export function DecisionAuditTrailModal({
               >
                 {showNewForm ? "Cancelar" : "+ Homologar Nova Decisão"}
               </button>
-            ) : (
-              <span style={{ fontSize: "11.5px", color: "var(--muted, #52675d)", fontStyle: "italic" }}>
-                Modo leitura (alterne para Revisor ou Publicador para homologar decisões)
-              </span>
-            )}
+            ) : null}
           </div>
 
+          {/* Bloqueio de Acesso Não Autorizado */}
+          {!canAccessAudit && (
+            <div
+              style={{
+                background: "#fef3c7",
+                border: "1px solid #fde68a",
+                borderRadius: "6px",
+                padding: "16px",
+                color: "#92400e",
+                fontSize: "13px",
+                lineHeight: "1.5",
+              }}
+            >
+              <strong>Acesso Restrito:</strong> A visualização e inserção na trilha imutável de auditoria exige autenticação com papel de <strong>Revisor</strong> ou <strong>Publicador</strong>. Alterne o seletor de papel no topo da página para autenticar sua sessão.
+            </div>
+          )}
+
+          {/* Estado de Carregamento */}
+          {canAccessAudit && isLoading && (
+            <div style={{ padding: "24px 0", textAlign: "center", color: "var(--muted, #52675d)", fontSize: "13px" }}>
+              Carregando registros persistidos da trilha de auditoria...
+            </div>
+          )}
+
+          {/* Estado de Erro / Indisponibilidade */}
+          {canAccessAudit && !isLoading && fetchError && (
+            <div
+              style={{
+                background: "#fef2f2",
+                border: "1px solid #fee2e2",
+                borderRadius: "6px",
+                padding: "14px 16px",
+                color: "#991b1b",
+                fontSize: "13px",
+                lineHeight: "1.5",
+              }}
+            >
+              <strong>Trilha Indisponível:</strong> {fetchError}.
+              <div style={{ fontSize: "11.5px", marginTop: "4px", color: "#b91c1c" }}>
+                Conforme diretrizes de integridade, dados de exemplo não são apresentados como histórico oficial.
+              </div>
+            </div>
+          )}
+
           {/* Formulário de Nova Decisão */}
-          {showNewForm && canRecordDecision && (
+          {showNewForm && canAccessAudit && (
             <form
               onSubmit={handleRecordSubmit}
               style={{
@@ -273,7 +306,7 @@ export function DecisionAuditTrailModal({
               }}
             >
               <h3 style={{ margin: "0 0 12px 0", fontSize: "14px", color: "var(--ink, #15342d)" }}>
-                Homologação de Ação Governança
+                Homologação de Ação de Governança
               </h3>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
                 <div>
@@ -336,70 +369,78 @@ export function DecisionAuditTrailModal({
           )}
 
           {/* Lista de Registros da Trilha */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {records.map((rec, index) => (
-              <div
-                key={rec.id}
-                style={{
-                  border: "1px solid #e2e8f0",
-                  borderRadius: "6px",
-                  padding: "14px 16px",
-                  background: index === 0 ? "#ffffff" : "#fcfcfc",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
-                  <div>
-                    <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--ink, #15342d)", marginRight: "8px" }}>
-                      {rec.action}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: "10.5px",
-                        fontWeight: 700,
-                        textTransform: "uppercase",
-                        padding: "2px 6px",
-                        borderRadius: "3px",
-                        background: rec.actor_role === "publisher" ? "#def0e5" : rec.actor_role === "reviewer" ? "#faedd9" : "#e2e8f0",
-                        color: rec.actor_role === "publisher" ? "#166534" : rec.actor_role === "reviewer" ? "#9a3412" : "#334155",
-                      }}
-                    >
-                      {rec.actor_role} ({rec.actor_id})
-                    </span>
-                  </div>
-                  <span style={{ fontSize: "11px", color: "var(--muted, #52675d)", fontFamily: "monospace" }}>
-                    {new Date(rec.created_at).toLocaleString("pt-BR")}
-                  </span>
-                </div>
+          {canAccessAudit && !isLoading && !fetchError && records.length === 0 && (
+            <div style={{ padding: "24px 0", textAlign: "center", color: "var(--muted, #52675d)", fontSize: "13px" }}>
+              Nenhum evento registrado na trilha de auditoria até o momento.
+            </div>
+          )}
 
-                <p style={{ margin: "4px 0 8px 0", fontSize: "12.5px", color: "#334155", lineHeight: "1.5" }}>
-                  <strong>Justificativa:</strong> {rec.justification}
-                </p>
-
+          {canAccessAudit && !isLoading && !fetchError && records.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {records.map((rec, index) => (
                 <div
+                  key={rec.id}
                   style={{
-                    background: "#f8fafc",
-                    border: "1px solid #f1f5f9",
-                    borderRadius: "4px",
-                    padding: "8px 10px",
-                    fontSize: "10.5px",
-                    fontFamily: "monospace",
-                    color: "#64748b",
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "8px",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "6px",
+                    padding: "14px 16px",
+                    background: index === 0 ? "#ffffff" : "#fcfcfc",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
                   }}
                 >
-                  <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    <strong>Payload Hash:</strong> {rec.payload_hash}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
+                    <div>
+                      <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--ink, #15342d)", marginRight: "8px" }}>
+                        {rec.action}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "10.5px",
+                          fontWeight: 700,
+                          textTransform: "uppercase",
+                          padding: "2px 6px",
+                          borderRadius: "3px",
+                          background: rec.actor_role === "publisher" ? "#def0e5" : rec.actor_role === "reviewer" ? "#faedd9" : "#e2e8f0",
+                          color: rec.actor_role === "publisher" ? "#166534" : rec.actor_role === "reviewer" ? "#9a3412" : "#334155",
+                        }}
+                      >
+                        {rec.actor_role} ({rec.actor_id})
+                      </span>
+                    </div>
+                    <span style={{ fontSize: "11px", color: "var(--muted, #52675d)", fontFamily: "monospace" }}>
+                      {new Date(rec.created_at).toLocaleString("pt-BR")}
+                    </span>
                   </div>
-                  <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    <strong>Prev Hash:</strong> {rec.prev_log_hash}
+
+                  <p style={{ margin: "4px 0 8px 0", fontSize: "12.5px", color: "#334155", lineHeight: "1.5" }}>
+                    <strong>Justificativa:</strong> {rec.justification}
+                  </p>
+
+                  <div
+                    style={{
+                      background: "#f8fafc",
+                      border: "1px solid #f1f5f9",
+                      borderRadius: "4px",
+                      padding: "8px 10px",
+                      fontSize: "10.5px",
+                      fontFamily: "monospace",
+                      color: "#64748b",
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "8px",
+                    }}
+                  >
+                    <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <strong>Payload Hash:</strong> {rec.payload_hash}
+                    </div>
+                    <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <strong>Prev Hash:</strong> {rec.prev_log_hash}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Rodapé */}
@@ -414,7 +455,7 @@ export function DecisionAuditTrailModal({
           }}
         >
           <span style={{ fontSize: "11px", color: "var(--muted, #52675d)" }}>
-            PostgreSQL Append-Only Ledger • Encadeamento de Integridade
+            PostgreSQL Append-Only Ledger • Encadeamento Criptográfico SHA-256
           </span>
           <button
             onClick={onClose}

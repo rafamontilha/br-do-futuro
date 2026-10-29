@@ -4,6 +4,7 @@ import (
 	"math"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -125,10 +126,12 @@ func (a *API) checkRateLimit(w http.ResponseWriter, r *http.Request, auth AuthCo
 	key := getClientKey(r, auth)
 	limitRPM := getRateLimitForRole(auth.Role)
 
-	// Permite override de teste via header para testes de fumaça e integração
-	if testLimit := r.Header.Get("X-Test-Rate-Limit-RPM"); testLimit != "" {
-		if val, err := strconv.Atoi(testLimit); err == nil && val > 0 {
-			limitRPM = val
+	// Permite override de teste via header estritamente em ambiente de teste configurado
+	if os.Getenv("BDF_ENABLE_TEST_RATE_LIMIT") == "1" {
+		if testLimit := r.Header.Get("X-Test-Rate-Limit-RPM"); testLimit != "" {
+			if val, err := strconv.Atoi(testLimit); err == nil && val > 0 {
+				limitRPM = val
+			}
 		}
 	}
 

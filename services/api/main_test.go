@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -274,4 +275,27 @@ func TestPaginationJSONArray(t *testing.T) {
 	if metaLast.HasMore || string(pagedLast) != `[{"id":5}]` {
 		t.Fatalf("expected single last item with has_more=false, got: %s, meta: %+v", string(pagedLast), metaLast)
 	}
+}
+
+func TestCanonicalGenesisHash(t *testing.T) {
+	m := map[string]any{
+		"action":         "initialize_audit_ledger",
+		"actor_id":       "system-genesis",
+		"actor_role":     "system",
+		"entity_id":      "bdf-foundation",
+		"entity_type":    "system",
+		"event_id":       nil,
+		"id":             "audit-genesis-0000",
+		"justification":  "Gênese da trilha imutável de auditoria de decisões do Brasil do Futuro (Incremento 04)",
+		"new_state":      map[string]any{"status": "initialized", "version": "v1.4"},
+		"prev_log_hash":  "0000000000000000000000000000000000000000000000000000000000000000",
+		"previous_state": nil,
+	}
+	bytes, err := json.Marshal(m)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
+	t.Logf("Go JSON: %s", string(bytes))
+	h := computePayloadHash(m)
+	t.Logf("Go Hash: %s", h)
 }

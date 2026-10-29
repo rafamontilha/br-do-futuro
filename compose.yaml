@@ -32,6 +32,7 @@ services:
     environment:
       DATABASE_URL: postgres://bdf_reader:local-reader-only@db:5432/bdf
       CATALOG_PATH: /app/catalog.json
+      BDF_ENABLE_TEST_RATE_LIMIT: "1"
     volumes: ["./catalog.json:/app/catalog.json:ro"]
     ports: ["127.0.0.1:${BDF_API_PORT:-18080}:8080"]
     depends_on:

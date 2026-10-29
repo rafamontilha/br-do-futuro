@@ -77,6 +77,13 @@ func (a *API) handleCreateDecisionAudit(w http.ResponseWriter, r *http.Request, 
 	}
 	defer tx.Rollback(ctx)
 
+	// Serializa inserções concorrentes na cadeia de auditoria via trava consultiva de transação
+	if _, err := tx.Exec(ctx, "SELECT pg_advisory_xact_lock(742910482)"); err != nil {
+		slog.Error("audit_advisory_lock_failed", "error", err)
+		write(w, http.StatusInternalServerError, map[string]string{"error": "could not acquire audit serialization lock"})
+		return
+	}
+
 	// Busca o hash do último registro da cadeia de auditoria
 	var prevHash string
 	err = tx.QueryRow(ctx, `
@@ -88,8 +95,23 @@ func (a *API) handleCreateDecisionAudit(w http.ResponseWriter, r *http.Request, 
 		prevHash = "0000000000000000000000000000000000000000000000000000000000000000"
 	}
 
-	payloadHash := computePayloadHash(req.NewState)
 	auditID := fmt.Sprintf("audit-dec-%s-%s", time.Now().UTC().Format("20060102"), newUUID()[:8])
+
+	// Hashing canônico completo de todos os campos da decisão + hash predecessor
+	canonicalPayload := map[string]any{
+		"action":         req.Action,
+		"actor_id":       auth.ActorID,
+		"actor_role":     string(auth.Role),
+		"entity_id":      req.EntityID,
+		"entity_type":    req.EntityType,
+		"event_id":       req.EventID,
+		"id":             auditID,
+		"justification":  strings.TrimSpace(req.Justification),
+		"new_state":      req.NewState,
+		"prev_log_hash":  prevHash,
+		"previous_state": req.PreviousState,
+	}
+	payloadHash := computePayloadHash(canonicalPayload)
 
 	prevJSON, _ := json.Marshal(req.PreviousState)
 	newJSON, _ := json.Marshal(req.NewState)

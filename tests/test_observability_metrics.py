@@ -359,7 +359,7 @@ def test_observability_counts_against_database_integration(db):
         quarantine_count = conn.execute("SELECT count(*) FROM ingestion_run WHERE status = 'quarantined'").fetchone()[0]
         assert quarantine_count >= 0
 
-        pending_reviews_count = conn.execute("SELECT count(*) FROM alert WHERE status = 'pending_review'").fetchone()[0]
+        pending_reviews_count = conn.execute("SELECT count(*) FROM alert WHERE review_status = 'pending_human_review'").fetchone()[0]
         assert pending_reviews_count >= 0
 
         # Constrói o snapshot baseado nas consultas reais ao banco

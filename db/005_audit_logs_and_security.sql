@@ -59,6 +59,13 @@ INSERT INTO decision_audit_log (
     'Gênese da trilha imutável de auditoria de decisões do Brasil do Futuro (Incremento 04)',
     NULL,
     '{"status": "initialized", "version": "v1.4"}'::jsonb,
-    'fa57e04f83fac28110ef3c82f4141d85eaf5858788cf7b6dbbc9f85ff91f0a9a',
+    'af9fe7ed02660efdca8dfbcd16d0c9b300a92259e40671fd6b4ef18d7708975c',
     '0000000000000000000000000000000000000000000000000000000000000000'
 ) ON CONFLICT (id) DO NOTHING;
+
+DO $$ BEGIN
+    IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'bdf_reader') THEN
+        GRANT SELECT ON system_api_keys TO bdf_reader;
+        GRANT SELECT, INSERT ON decision_audit_log TO bdf_reader;
+    END IF;
+END $$;

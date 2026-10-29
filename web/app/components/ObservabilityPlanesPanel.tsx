@@ -9,8 +9,8 @@ export interface ObservabilityData {
   platform: {
     uptime_seconds: number;
     database_status: string;
-    error_rate_pct: number;
-    p95_latency_ms: number;
+    error_rate_pct?: number | null;
+    p95_latency_ms?: number | null;
   };
   data: {
     tracked_series_count: number;
@@ -26,13 +26,13 @@ export interface ObservabilityData {
   decisions: {
     total_decisions_count: number;
     pending_reviews_count: number;
-    audit_chain_intact: boolean;
+    audit_chain_intact?: boolean | null;
   };
   slo_compliance: {
-    source_window_compliance_pct: number;
-    metadata_completeness_pct: number;
-    scenario_lineage_coverage_pct: number;
-    reproducible_forecasts_pct: number;
+    source_window_compliance_pct?: number | null;
+    metadata_completeness_pct?: number | null;
+    scenario_lineage_coverage_pct?: number | null;
+    reproducible_forecasts_pct?: number | null;
   };
 }
 
@@ -41,50 +41,53 @@ interface ObservabilityPlanesPanelProps {
   initialMetrics?: ObservabilityData;
 }
 
-const defaultObservabilityData: ObservabilityData = {
-  timestamp: "2026-10-29T10:30:00Z",
+const unmeasuredObservabilityData: ObservabilityData = {
+  timestamp: new Date().toISOString(),
   platform: {
-    uptime_seconds: 3600,
-    database_status: "healthy",
-    error_rate_pct: 0.02,
-    p95_latency_ms: 12.4,
+    uptime_seconds: 0,
+    database_status: "unconfigured",
+    error_rate_pct: null,
+    p95_latency_ms: null,
   },
   data: {
-    tracked_series_count: 12,
+    tracked_series_count: 0,
     stale_series_count: 0,
     quarantine_count: 0,
-    last_ingestion_at: "2026-10-29T09:15:00Z",
+    last_ingestion_at: null,
   },
   models: {
-    active_scenarios_count: 3,
-    calibrated_parameters_count: 4,
-    last_simulation_at: "2026-10-29T09:45:00Z",
+    active_scenarios_count: 0,
+    calibrated_parameters_count: 0,
+    last_simulation_at: null,
   },
   decisions: {
-    total_decisions_count: 1,
+    total_decisions_count: 0,
     pending_reviews_count: 0,
-    audit_chain_intact: true,
+    audit_chain_intact: null,
   },
   slo_compliance: {
-    source_window_compliance_pct: 99.4,
-    metadata_completeness_pct: 100.0,
-    scenario_lineage_coverage_pct: 100.0,
-    reproducible_forecasts_pct: 100.0,
+    source_window_compliance_pct: null,
+    metadata_completeness_pct: null,
+    scenario_lineage_coverage_pct: null,
+    reproducible_forecasts_pct: null,
   },
 };
 
 export function ObservabilityPlanesPanel({
   currentRole,
-  initialMetrics = defaultObservabilityData,
+  initialMetrics,
 }: ObservabilityPlanesPanelProps) {
-  const [metrics] = useState<ObservabilityData>(initialMetrics);
+  const [metrics] = useState<ObservabilityData>(initialMetrics || unmeasuredObservabilityData);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
 
   const formatUptime = (seconds: number) => {
+    if (!seconds || seconds <= 0) return "0m";
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
-    return `${hrs}h ${mins}m`;
+    return hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
   };
+
+  const isHealthy = metrics.platform.database_status === "healthy";
 
   return (
     <section
@@ -117,7 +120,7 @@ export function ObservabilityPlanesPanel({
             </span>
           </div>
           <p style={{ margin: "6px 0 0 0", fontSize: "13px", color: "var(--muted, #52675d)" }}>
-            Telemetria unificada de Plataforma, Dados, Modelos e Decisões com monitoramento contínuo de SLOs.
+            Telemetria unificada de Plataforma, Dados, Modelos e Decisões derivada de evidências operacionais.
           </p>
         </div>
 
@@ -158,13 +161,20 @@ export function ObservabilityPlanesPanel({
             <span style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#1d5d85" }}>
               1. Plataforma
             </span>
-            <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#16a34a" }} />
+            <span
+              style={{
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                background: isHealthy ? "#16a34a" : "#f59e0b",
+              }}
+            />
           </div>
           <div style={{ fontSize: "20px", fontWeight: 800, color: "var(--ink, #15342d)", marginBottom: "4px" }}>
             {formatUptime(metrics.platform.uptime_seconds)}
           </div>
           <div style={{ fontSize: "11.5px", color: "var(--muted, #52675d)", lineHeight: "1.5" }}>
-            Uptime contínuo • Latência p95: <strong>{metrics.platform.p95_latency_ms} ms</strong> • Taxa de erro: <strong>{metrics.platform.error_rate_pct}%</strong>
+            Status banco: <strong>{metrics.platform.database_status}</strong> • Latência p95: <strong>{metrics.platform.p95_latency_ms != null ? `${metrics.platform.p95_latency_ms} ms` : "Não aferido"}</strong> • Taxa de erro: <strong>{metrics.platform.error_rate_pct != null ? `${metrics.platform.error_rate_pct}%` : "Não aferido"}</strong>
           </div>
         </div>
 
@@ -177,10 +187,10 @@ export function ObservabilityPlanesPanel({
             <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#16a34a" }} />
           </div>
           <div style={{ fontSize: "20px", fontWeight: 800, color: "var(--ink, #15342d)", marginBottom: "4px" }}>
-            {metrics.data.tracked_series_count} Domínios
+            {metrics.data.tracked_series_count} Séries / Contratos
           </div>
           <div style={{ fontSize: "11.5px", color: "var(--muted, #52675d)", lineHeight: "1.5" }}>
-            {metrics.data.stale_series_count} séries com atraso • <strong>{metrics.data.quarantine_count}</strong> em quarentena de qualidade
+            {metrics.data.stale_series_count} séries com atraso • <strong>{metrics.data.quarantine_count}</strong> em quarentena
           </div>
         </div>
 
@@ -193,10 +203,10 @@ export function ObservabilityPlanesPanel({
             <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#16a34a" }} />
           </div>
           <div style={{ fontSize: "20px", fontWeight: 800, color: "var(--ink, #15342d)", marginBottom: "4px" }}>
-            {metrics.models.active_scenarios_count} Cenários
+            {metrics.models.active_scenarios_count} Cenários Ativos
           </div>
           <div style={{ fontSize: "11.5px", color: "var(--muted, #52675d)", lineHeight: "1.5" }}>
-            <strong>{metrics.models.calibrated_parameters_count}</strong> calibrações fiscais ativas • Backtesting reprodutível
+            <strong>{metrics.models.calibrated_parameters_count}</strong> parâmetros fiscais calibrados
           </div>
         </div>
 
@@ -206,13 +216,20 @@ export function ObservabilityPlanesPanel({
             <span style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#166534" }}>
               4. Decisões & Auditoria
             </span>
-            <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#16a34a" }} />
+            <span
+              style={{
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                background: metrics.decisions.audit_chain_intact === true ? "#16a34a" : metrics.decisions.audit_chain_intact === false ? "#dc2626" : "#94a3b8",
+              }}
+            />
           </div>
           <div style={{ fontSize: "20px", fontWeight: 800, color: "var(--ink, #15342d)", marginBottom: "4px" }}>
             {metrics.decisions.total_decisions_count} Decisões
           </div>
           <div style={{ fontSize: "11.5px", color: "var(--muted, #52675d)", lineHeight: "1.5" }}>
-            Cadeia SHA-256: <strong>{metrics.decisions.audit_chain_intact ? "Íntegra" : "Violação"}</strong> • {metrics.decisions.pending_reviews_count} pendências
+            Cadeia SHA-256: <strong>{metrics.decisions.audit_chain_intact === true ? "Íntegra" : metrics.decisions.audit_chain_intact === false ? "Violação Detectada" : "Não aferida"}</strong> • {metrics.decisions.pending_reviews_count} revisões pendentes
           </div>
         </div>
       </div>
@@ -220,34 +237,34 @@ export function ObservabilityPlanesPanel({
       {/* Tabela de SLOs Mensurados */}
       <div style={{ border: "1px solid #e2e8f0", borderRadius: "6px", overflow: "hidden" }}>
         <div style={{ background: "#f1f5f3", padding: "10px 16px", fontSize: "12px", fontWeight: 700, color: "var(--ink, #15342d)" }}>
-          Métricas de Nível de Serviço (SLOs Constitucionais do Piloto)
+          Métricas de Nível de Serviço (SLOs Constitucionais Mensurados)
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1px", background: "#e2e8f0" }}>
           <div style={{ background: "#ffffff", padding: "12px 16px" }}>
             <div style={{ fontSize: "11px", color: "var(--muted, #52675d)" }}>Janela de Fonte</div>
-            <div style={{ fontSize: "16px", fontWeight: 700, color: "#166534" }}>
-              {metrics.slo_compliance.source_window_compliance_pct}%
+            <div style={{ fontSize: "16px", fontWeight: 700, color: metrics.slo_compliance.source_window_compliance_pct != null ? "#166534" : "#64748b" }}>
+              {metrics.slo_compliance.source_window_compliance_pct != null ? `${metrics.slo_compliance.source_window_compliance_pct}%` : "Aguardando coletas"}
             </div>
             <div style={{ fontSize: "10px", color: "#64748b" }}>Meta: ≥ 99.0%</div>
           </div>
           <div style={{ background: "#ffffff", padding: "12px 16px" }}>
             <div style={{ fontSize: "11px", color: "var(--muted, #52675d)" }}>Metadados Públicos</div>
-            <div style={{ fontSize: "16px", fontWeight: 700, color: "#166534" }}>
-              {metrics.slo_compliance.metadata_completeness_pct}%
+            <div style={{ fontSize: "16px", fontWeight: 700, color: metrics.slo_compliance.metadata_completeness_pct != null ? "#166534" : "#64748b" }}>
+              {metrics.slo_compliance.metadata_completeness_pct != null ? `${metrics.slo_compliance.metadata_completeness_pct}%` : "Aguardando coletas"}
             </div>
             <div style={{ fontSize: "10px", color: "#64748b" }}>Meta: 100%</div>
           </div>
           <div style={{ background: "#ffffff", padding: "12px 16px" }}>
             <div style={{ fontSize: "11px", color: "var(--muted, #52675d)" }}>Rastreabilidade Cenários</div>
-            <div style={{ fontSize: "16px", fontWeight: 700, color: "#166534" }}>
-              {metrics.slo_compliance.scenario_lineage_coverage_pct}%
+            <div style={{ fontSize: "16px", fontWeight: 700, color: metrics.slo_compliance.scenario_lineage_coverage_pct != null ? "#166534" : "#64748b" }}>
+              {metrics.slo_compliance.scenario_lineage_coverage_pct != null ? `${metrics.slo_compliance.scenario_lineage_coverage_pct}%` : "Aguardando coletas"}
             </div>
             <div style={{ fontSize: "10px", color: "#64748b" }}>Meta: 100%</div>
           </div>
           <div style={{ background: "#ffffff", padding: "12px 16px" }}>
             <div style={{ fontSize: "11px", color: "var(--muted, #52675d)" }}>Reprodutibilidade Forecasts</div>
-            <div style={{ fontSize: "16px", fontWeight: 700, color: "#166534" }}>
-              {metrics.slo_compliance.reproducible_forecasts_pct}%
+            <div style={{ fontSize: "16px", fontWeight: 700, color: metrics.slo_compliance.reproducible_forecasts_pct != null ? "#166534" : "#64748b" }}>
+              {metrics.slo_compliance.reproducible_forecasts_pct != null ? `${metrics.slo_compliance.reproducible_forecasts_pct}%` : "Aguardando coletas"}
             </div>
             <div style={{ fontSize: "10px", color: "#64748b" }}>Meta: 100%</div>
           </div>
