@@ -149,7 +149,7 @@
       "domain": 3,
       "series": 432,
       "unit": "percent_year",
-      "frequency": "monthly",
+      "frequency": "daily",
       "origin": "BCB/SGS",
       "revisable": false,
       "indicator_id": "br.selic.target_annual",
