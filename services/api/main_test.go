@@ -341,3 +341,149 @@ func TestIndicatorsIncludesAllP0Series(t *testing.T) {
 		}
 	}
 }
+
+func TestTrajectoriesEndpoints(t *testing.T) {
+	a := &API{rateLimiter: NewRateLimiter()}
+
+	t.Run("list all trajectories in fixture mode", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", "/v1/trajectories?mode=fixture", nil)
+		a.handle(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d", w.Code)
+		}
+		var resp struct {
+			Meta map[string]any    `json:"meta"`
+			Data []TrajectoryPoint `json:"data"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if len(resp.Data) == 0 {
+			t.Fatal("expected non-empty trajectories list")
+		}
+	})
+
+	t.Run("query by indicator_id query param", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", "/v1/trajectories?indicator_id=br.ipca.12m&mode=fixture", nil)
+		a.handle(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d", w.Code)
+		}
+		var resp struct {
+			Data []TrajectoryPoint `json:"data"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		for _, pt := range resp.Data {
+			if pt.IndicatorID != "br.ipca.12m" {
+				t.Errorf("expected only br.ipca.12m, got %s", pt.IndicatorID)
+			}
+			if pt.ForecastValue != nil && pt.ForecastLower != nil && pt.ForecastUpper != nil {
+				if *pt.ForecastLower > *pt.ForecastValue || *pt.ForecastValue > *pt.ForecastUpper {
+					t.Errorf("invalid forecast bounds: lower=%f, val=%f, upper=%f",
+						*pt.ForecastLower, *pt.ForecastValue, *pt.ForecastUpper)
+				}
+			}
+		}
+	})
+
+	t.Run("query by path param /v1/trajectories/:indicator_id", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", "/v1/trajectories/br.gdp.quarterly_yoy?mode=fixture", nil)
+		a.handle(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d", w.Code)
+		}
+		var resp struct {
+			Data []TrajectoryPoint `json:"data"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if len(resp.Data) == 0 {
+			t.Fatal("expected points for br.gdp.quarterly_yoy")
+		}
+	})
+
+	t.Run("respect bitemporal as_of cutoff", func(t *testing.T) {
+		// Em 2023-06-01, os dados de 2023 e 2024 do IPCA ainda não eram conhecidos (publicados apenas em 2024 e 2025)
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", "/v1/trajectories?indicator_id=br.ipca.12m&mode=fixture&as_of=2023-06-01T00:00:00Z", nil)
+		a.handle(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d", w.Code)
+		}
+		var resp struct {
+			Data []TrajectoryPoint `json:"data"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		for _, pt := range resp.Data {
+			if pt.PeriodLabel == "2022" && pt.ActualValue == nil {
+				t.Errorf("expected 2022 actual to be known at 2023-06-01, got nil")
+			}
+			if (pt.PeriodLabel == "2023" || pt.PeriodLabel == "2024") && pt.ActualValue != nil {
+				t.Errorf("expected actual for %s to be nil as of 2023-06-01, got %v", pt.PeriodLabel, *pt.ActualValue)
+			}
+		}
+	})
+
+	t.Run("query by path param /v1/trajectories/:indicator_id for selic target", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", "/v1/trajectories/br.selic.target_annual?mode=fixture", nil)
+		a.handle(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d", w.Code)
+		}
+		var resp struct {
+			Data []TrajectoryPoint `json:"data"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if len(resp.Data) == 0 {
+			t.Fatal("expected points for br.selic.target_annual")
+		}
+		for _, pt := range resp.Data {
+			if pt.IndicatorID != "br.selic.target_annual" {
+				t.Errorf("expected only br.selic.target_annual, got %s", pt.IndicatorID)
+			}
+			if pt.Unit != "percent_year" {
+				t.Errorf("expected percent_year unit for annualized Selic target, got %s", pt.Unit)
+			}
+		}
+	})
+
+	t.Run("load trajectories from embedded fixture", func(t *testing.T) {
+		t.Setenv("TRAJECTORIES_FIXTURE_PATH", "/non/existent/path/trajectories.json")
+		pts, err := loadTrajectoriesFixture()
+		if err != nil {
+			t.Fatalf("expected embedded fixture fallback to succeed, got %v", err)
+		}
+		if len(pts) == 0 {
+			t.Fatal("expected embedded points, got empty")
+		}
+	})
+
+	t.Run("non existent indicator returns 404", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", "/v1/trajectories/non.existent.indicator?mode=fixture", nil)
+		a.handle(w, r)
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("mode source without db returns 503 and never falls back to fixture", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", "/v1/trajectories?mode=source", nil)
+		a.handle(w, r)
+		if w.Code != http.StatusServiceUnavailable {
+			t.Fatalf("expected 503 for mode=source without db, got %d", w.Code)
+		}
+	})
+}

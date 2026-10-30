@@ -90,3 +90,16 @@ def test_ingest_p0_fixtures_end_to_end_and_idempotent(db):
     res_fx_repeat = ingest(db, "br.fx.usd_brl.ptax", fixture("fx-ptax"), "fixture:fx-ptax.json")
     assert res_fx_repeat["status"] == "unchanged"
     assert res_fx_repeat["changes"] == 0
+
+
+def test_selic_target_annual_daily_validation():
+    # BCB SGS 432 has daily frequency with dates of Copom decisions / business days
+    payload = json.dumps([
+        {"data": "19/09/2024", "valor": "10.75"},
+        {"data": "07/11/2024", "valor": "11.25"},
+    ]).encode("utf-8")
+
+    parsed = validate(payload, INDICATORS["br.selic.target_annual"])
+    assert len(parsed) == 2
+    assert parsed[0][1] == Decimal("10.75")
+    assert parsed[1][1] == Decimal("11.25")
