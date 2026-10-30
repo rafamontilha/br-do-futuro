@@ -107,17 +107,22 @@ def test_db_trajectories_schema_and_seed(db):
                 assert masked is None, f"actual_value for {label} should be masked at 2023-01-01"
 
 
-def test_bdf_reader_has_select_on_indicator_trajectories(db):
+def test_bdf_reader_has_select_on_all_public_tables(db):
     """Garante que a role bdf_reader utilizada pela API em produção tem privilégios
 
-    de leitura SELECT na tabela indicator_trajectories. Previne erro P1 de permission denied.
+    de leitura SELECT em todas as tabelas do schema public. Previne erros P1 de permission denied.
     """
     with psycopg.connect(db) as conn:
         role_exists = conn.execute("SELECT 1 FROM pg_roles WHERE rolname = 'bdf_reader'").fetchone()
         if not role_exists:
             pytest.skip("bdf_reader role not configured in test environment")
 
-        has_privilege = conn.execute(
-            "SELECT has_table_privilege('bdf_reader', 'indicator_trajectories', 'SELECT')"
-        ).fetchone()[0]
-        assert has_privilege is True, "bdf_reader role must have SELECT privilege on indicator_trajectories table"
+        tables = conn.execute(
+            "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"
+        ).fetchall()
+        assert len(tables) > 0, "expected public tables to exist"
+        for (tbl,) in tables:
+            has_privilege = conn.execute(
+                f"SELECT has_table_privilege('bdf_reader', '{tbl}', 'SELECT')"
+            ).fetchone()[0]
+            assert has_privilege is True, f"bdf_reader role must have SELECT privilege on public table '{tbl}'"
