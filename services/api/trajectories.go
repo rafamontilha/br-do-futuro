@@ -114,7 +114,7 @@ func (a *API) handleGetTrajectories(w http.ResponseWriter, r *http.Request, ctx 
 		FROM indicator_trajectories
 		WHERE ($1 = '' OR indicator_id = $1)
 		  AND mode = $3
-		  AND created_at <= $2
+		  AND ($3 = 'fixture' OR created_at <= $2)
 		ORDER BY indicator_id ASC, period_date ASC
 	) t`
 
