@@ -6,11 +6,11 @@
 - **Modelo de Trajetórias Macroeconômicas Unificadas:**
   - Consolidação temporal das 5 curvas comparativas para os 6 indicadores do núcleo P0:
     1. `br.ipca.12m` (Inflação IPCA acumulada 12 meses)
-    2. `br.bcb.selic_meta` (Meta da Taxa Selic anualizada)
-    3. `br.stn.divida_liquida_gdp` (Dívida Líquida do Setor Público % do PIB)
-    4. `IBGE_PIB_TRIMESTRAL_VAR` (PIB a preços de mercado, variação % interanual)
-    5. `BCB_PTAX_USD_BRL` (Taxa de câmbio comercial USD/BRL fechamento PTAX)
-    6. `IBGE_PNADC_DESOCUPACAO` (Taxa de desocupação PNAD Contínua %)
+    2. `br.selic.target_annual` (Meta da Taxa Selic anualizada pelo Copom)
+    3. `br.debt.gross_pct_gdp` (Dívida Bruta do Governo Geral % do PIB)
+    4. `br.gdp.quarterly_yoy` (PIB a preços de mercado, variação % interanual)
+    5. `br.fx.usd_brl.ptax` (Taxa de câmbio comercial USD/BRL fechamento PTAX)
+    6. `br.labor.unemployment_rate` (Taxa de desocupação PNAD Contínua %)
   - As 5 curvas padronizadas por indicador:
     - **Realizado (`actual`):** Dados históricos capturados de fontes oficiais (BCB, IBGE, STN) com registro de vintage e hash SHA-256.
     - **Baseline (`baseline`):** Série histórica de referência / média histórica ou tendência pré-choque documentada.

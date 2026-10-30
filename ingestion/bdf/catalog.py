@@ -12,6 +12,8 @@ INDICATORS = {
                         frequency="monthly", origin="IBGE via BCB/SGS", revisable=True),
     "br.selic.daily": dict(name="Selic efetiva diária", domain=3, series=11, unit="percent_day",
                            frequency="daily", origin="BCB/SGS", revisable=True),
+    "br.selic.target_annual": dict(name="Meta Selic anualizada (Copom)", domain=3, series=432, unit="percent_year",
+                                  frequency="monthly", origin="BCB/SGS", revisable=False),
     "br.debt.gross_pct_gdp": dict(name="Dívida bruta do governo geral", domain=12, series=13762,
                                  unit="percent_gdp", frequency="monthly", origin="BCB/SGS", revisable=True),
     "br.gdp.quarterly_yoy": dict(name="PIB trimestral a preços de mercado (variação % interanual)", domain=1,

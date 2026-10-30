@@ -432,6 +432,43 @@ func TestTrajectoriesEndpoints(t *testing.T) {
 		}
 	})
 
+	t.Run("query by path param /v1/trajectories/:indicator_id for selic target", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", "/v1/trajectories/br.selic.target_annual?mode=fixture", nil)
+		a.handle(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d", w.Code)
+		}
+		var resp struct {
+			Data []TrajectoryPoint `json:"data"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if len(resp.Data) == 0 {
+			t.Fatal("expected points for br.selic.target_annual")
+		}
+		for _, pt := range resp.Data {
+			if pt.IndicatorID != "br.selic.target_annual" {
+				t.Errorf("expected only br.selic.target_annual, got %s", pt.IndicatorID)
+			}
+			if pt.Unit != "percent_year" {
+				t.Errorf("expected percent_year unit for annualized Selic target, got %s", pt.Unit)
+			}
+		}
+	})
+
+	t.Run("load trajectories from embedded fixture", func(t *testing.T) {
+		t.Setenv("TRAJECTORIES_FIXTURE_PATH", "/non/existent/path/trajectories.json")
+		pts, err := loadTrajectoriesFixture()
+		if err != nil {
+			t.Fatalf("expected embedded fixture fallback to succeed, got %v", err)
+		}
+		if len(pts) == 0 {
+			t.Fatal("expected embedded points, got empty")
+		}
+	})
+
 	t.Run("non existent indicator returns 404", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "/v1/trajectories/non.existent.indicator?mode=fixture", nil)

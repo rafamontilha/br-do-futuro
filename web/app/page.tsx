@@ -365,7 +365,7 @@ export default async function Page({
         )}
       </section>
       <GovernanceAndObservabilitySection initialMetrics={observability?.data} />
-      <MacroTrajectoryPanel initialTrajectories={trajectories?.data} />
+      <MacroTrajectoryPanel initialTrajectories={trajectories?.data} mode={mode} />
       <PolicyLabPortfolio initialProposals={proposals?.data} />
       <GuidanceCommitmentsMatrix initialCommitments={guidance?.data} />
       <SourceFreshnessPanel initialSchedules={sourcesHealth?.data} />

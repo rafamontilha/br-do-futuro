@@ -21,7 +21,8 @@ export interface TrajectoryPoint {
 }
 
 interface MacroTrajectoryPanelProps {
-  initialTrajectories?: TrajectoryPoint[];
+  initialTrajectories?: TrajectoryPoint[] | null;
+  mode?: "source" | "fixture";
 }
 
 const INDICATOR_CONFIG: Record<
@@ -33,11 +34,11 @@ const INDICATOR_CONFIG: Record<
     shortName: "IPCA 12m",
     unitLabel: "% a.a.",
   },
-  "br.selic.daily": {
+  "br.selic.target_annual": {
     name: "Taxa Básica de Juros (Meta Selic Anualizada)",
-    shortName: "Selic Meta",
+    shortName: "Meta Selic",
     unitLabel: "% a.a.",
-    targetNote: "Regime de metas é sobre inflação, não taxa de juros",
+    targetNote: "Meta oficial fixada pelo Copom (% a.a.)",
   },
   "br.debt.gross_pct_gdp": {
     name: "Dívida Bruta do Governo Geral (DBGG)",
@@ -64,25 +65,54 @@ const INDICATOR_CONFIG: Record<
 
 const defaultTrajectories: TrajectoryPoint[] = [
   // 1. IPCA
-  { id: "traj-ipca-2022", indicator_id: "br.ipca.12m", period_date: "2022-12-01", period_label: "2022", actual_value: 5.79, baseline_value: 5.0, forecast_value: 5.8, forecast_lower: 5.2, forecast_upper: 6.4, target_value: 3.5, continuity_value: 5.5, unit: "percent_year", calibration_status: "official", source_agency: "IBGE" },
-  { id: "traj-ipca-2023", indicator_id: "br.ipca.12m", period_date: "2023-12-01", period_label: "2023", actual_value: 4.62, baseline_value: 4.5, forecast_value: 4.7, forecast_lower: 4.1, forecast_upper: 5.3, target_value: 3.25, continuity_value: 4.8, unit: "percent_year", calibration_status: "official", source_agency: "IBGE" },
-  { id: "traj-ipca-2024", indicator_id: "br.ipca.12m", period_date: "2024-12-01", period_label: "2024", actual_value: 4.83, baseline_value: 4.0, forecast_value: 4.6, forecast_lower: 4.0, forecast_upper: 5.2, target_value: 3.0, continuity_value: 4.5, unit: "percent_year", calibration_status: "official", source_agency: "IBGE" },
-  { id: "traj-ipca-2025", indicator_id: "br.ipca.12m", period_date: "2025-12-01", period_label: "2025", actual_value: null, baseline_value: 3.5, forecast_value: 3.9, forecast_lower: 3.2, forecast_upper: 4.6, target_value: 3.0, continuity_value: 4.2, unit: "percent_year", calibration_status: "illustrative", source_agency: "Focus/Model" },
-  { id: "traj-ipca-2026", indicator_id: "br.ipca.12m", period_date: "2026-12-01", period_label: "2026", actual_value: null, baseline_value: 3.5, forecast_value: 3.6, forecast_lower: 3.0, forecast_upper: 4.3, target_value: 3.0, continuity_value: 4.1, unit: "percent_year", calibration_status: "illustrative", source_agency: "Focus/Model" },
-  { id: "traj-ipca-2027", indicator_id: "br.ipca.12m", period_date: "2027-12-01", period_label: "2027", actual_value: null, baseline_value: 3.0, forecast_value: 3.5, forecast_lower: 2.8, forecast_upper: 4.2, target_value: 3.0, continuity_value: 4.0, unit: "percent_year", calibration_status: "illustrative", source_agency: "Guidance/Model" },
-  { id: "traj-ipca-2028", indicator_id: "br.ipca.12m", period_date: "2028-12-01", period_label: "2028", actual_value: null, baseline_value: 3.0, forecast_value: 3.3, forecast_lower: 2.6, forecast_upper: 4.0, target_value: 3.0, continuity_value: 3.9, unit: "percent_year", calibration_status: "illustrative", source_agency: "Guidance/Model" },
-  { id: "traj-ipca-2029", indicator_id: "br.ipca.12m", period_date: "2029-12-01", period_label: "2029", actual_value: null, baseline_value: 3.0, forecast_value: 3.2, forecast_lower: 2.5, forecast_upper: 3.9, target_value: 3.0, continuity_value: 3.8, unit: "percent_year", calibration_status: "illustrative", source_agency: "Guidance/Model" },
-  { id: "traj-ipca-2030", indicator_id: "br.ipca.12m", period_date: "2030-12-01", period_label: "2030", actual_value: null, baseline_value: 3.0, forecast_value: 3.0, forecast_lower: 2.3, forecast_upper: 3.7, target_value: 3.0, continuity_value: 3.8, unit: "percent_year", calibration_status: "illustrative", source_agency: "Guidance/Model" },
+  { id: "traj-ipca-2022", indicator_id: "br.ipca.12m", period_date: "2022-12-01", period_label: "2022", actual_value: 5.79, baseline_value: 5.0, forecast_value: 5.8, forecast_lower: 5.2, forecast_upper: 6.4, target_value: 3.5, continuity_value: 5.5, unit: "percent_year", calibration_status: "preliminary", source_agency: "IBGE (Fixture)" },
+  { id: "traj-ipca-2023", indicator_id: "br.ipca.12m", period_date: "2023-12-01", period_label: "2023", actual_value: 4.62, baseline_value: 4.5, forecast_value: 4.7, forecast_lower: 4.1, forecast_upper: 5.3, target_value: 3.25, continuity_value: 4.8, unit: "percent_year", calibration_status: "preliminary", source_agency: "IBGE (Fixture)" },
+  { id: "traj-ipca-2024", indicator_id: "br.ipca.12m", period_date: "2024-12-01", period_label: "2024", actual_value: 4.83, baseline_value: 4.0, forecast_value: 4.6, forecast_lower: 4.0, forecast_upper: 5.2, target_value: 3.0, continuity_value: 4.5, unit: "percent_year", calibration_status: "preliminary", source_agency: "IBGE (Fixture)" },
+  { id: "traj-ipca-2025", indicator_id: "br.ipca.12m", period_date: "2025-12-01", period_label: "2025", actual_value: null, baseline_value: 3.5, forecast_value: 3.9, forecast_lower: 3.2, forecast_upper: 4.6, target_value: 3.0, continuity_value: 4.2, unit: "percent_year", calibration_status: "illustrative", source_agency: "Focus/Model (Fixture)" },
+  { id: "traj-ipca-2026", indicator_id: "br.ipca.12m", period_date: "2026-12-01", period_label: "2026", actual_value: null, baseline_value: 3.5, forecast_value: 3.6, forecast_lower: 3.0, forecast_upper: 4.3, target_value: 3.0, continuity_value: 4.1, unit: "percent_year", calibration_status: "illustrative", source_agency: "Focus/Model (Fixture)" },
+  { id: "traj-ipca-2027", indicator_id: "br.ipca.12m", period_date: "2027-12-01", period_label: "2027", actual_value: null, baseline_value: 3.0, forecast_value: 3.5, forecast_lower: 2.8, forecast_upper: 4.2, target_value: 3.0, continuity_value: 4.0, unit: "percent_year", calibration_status: "illustrative", source_agency: "Guidance/Model (Fixture)" },
+  { id: "traj-ipca-2028", indicator_id: "br.ipca.12m", period_date: "2028-12-01", period_label: "2028", actual_value: null, baseline_value: 3.0, forecast_value: 3.3, forecast_lower: 2.6, forecast_upper: 4.0, target_value: 3.0, continuity_value: 3.9, unit: "percent_year", calibration_status: "illustrative", source_agency: "Guidance/Model (Fixture)" },
+  { id: "traj-ipca-2029", indicator_id: "br.ipca.12m", period_date: "2029-12-01", period_label: "2029", actual_value: null, baseline_value: 3.0, forecast_value: 3.2, forecast_lower: 2.5, forecast_upper: 3.9, target_value: 3.0, continuity_value: 3.8, unit: "percent_year", calibration_status: "illustrative", source_agency: "Guidance/Model (Fixture)" },
+  { id: "traj-ipca-2030", indicator_id: "br.ipca.12m", period_date: "2030-12-01", period_label: "2030", actual_value: null, baseline_value: 3.0, forecast_value: 3.0, forecast_lower: 2.3, forecast_upper: 3.7, target_value: 3.0, continuity_value: 3.8, unit: "percent_year", calibration_status: "illustrative", source_agency: "Guidance/Model (Fixture)" },
+
+  // 2. Selic
+  { id: "traj-selic-2022", indicator_id: "br.selic.target_annual", period_date: "2022-12-01", period_label: "2022", actual_value: 13.75, baseline_value: 9.5, forecast_value: 13.75, forecast_lower: 13.0, forecast_upper: 14.25, target_value: null, continuity_value: 13.0, unit: "percent_year", calibration_status: "preliminary", source_agency: "BCB (Fixture)" },
+  { id: "traj-selic-2023", indicator_id: "br.selic.target_annual", period_date: "2023-12-01", period_label: "2023", actual_value: 11.75, baseline_value: 9.5, forecast_value: 11.75, forecast_lower: 11.25, forecast_upper: 12.25, target_value: null, continuity_value: 11.5, unit: "percent_year", calibration_status: "preliminary", source_agency: "BCB (Fixture)" },
+  { id: "traj-selic-2024", indicator_id: "br.selic.target_annual", period_date: "2024-12-01", period_label: "2024", actual_value: 11.25, baseline_value: 9.5, forecast_value: 11.25, forecast_lower: 10.75, forecast_upper: 11.75, target_value: null, continuity_value: 11.0, unit: "percent_year", calibration_status: "preliminary", source_agency: "BCB (Fixture)" },
+  { id: "traj-selic-2025", indicator_id: "br.selic.target_annual", period_date: "2025-12-01", period_label: "2025", actual_value: null, baseline_value: 9.0, forecast_value: 12.25, forecast_lower: 11.5, forecast_upper: 13.0, target_value: null, continuity_value: 12.0, unit: "percent_year", calibration_status: "illustrative", source_agency: "Focus/Model (Fixture)" },
+  { id: "traj-selic-2026", indicator_id: "br.selic.target_annual", period_date: "2026-12-01", period_label: "2026", actual_value: null, baseline_value: 9.0, forecast_value: 11.5, forecast_lower: 10.5, forecast_upper: 12.5, target_value: null, continuity_value: 11.0, unit: "percent_year", calibration_status: "illustrative", source_agency: "Focus/Model (Fixture)" },
+  { id: "traj-selic-2027", indicator_id: "br.selic.target_annual", period_date: "2027-12-01", period_label: "2027", actual_value: null, baseline_value: 8.5, forecast_value: 10.0, forecast_lower: 9.0, forecast_upper: 11.0, target_value: null, continuity_value: 10.5, unit: "percent_year", calibration_status: "illustrative", source_agency: "Model (Fixture)" },
+  { id: "traj-selic-2028", indicator_id: "br.selic.target_annual", period_date: "2028-12-01", period_label: "2028", actual_value: null, baseline_value: 8.5, forecast_value: 9.5, forecast_lower: 8.5, forecast_upper: 10.5, target_value: null, continuity_value: 10.0, unit: "percent_year", calibration_status: "illustrative", source_agency: "Model (Fixture)" },
+  { id: "traj-selic-2029", indicator_id: "br.selic.target_annual", period_date: "2029-12-01", period_label: "2029", actual_value: null, baseline_value: 8.0, forecast_value: 9.0, forecast_lower: 8.0, forecast_upper: 10.0, target_value: null, continuity_value: 9.5, unit: "percent_year", calibration_status: "illustrative", source_agency: "Model (Fixture)" },
+  { id: "traj-selic-2030", indicator_id: "br.selic.target_annual", period_date: "2030-12-01", period_label: "2030", actual_value: null, baseline_value: 8.0, forecast_value: 8.5, forecast_lower: 7.5, forecast_upper: 9.5, target_value: null, continuity_value: 9.0, unit: "percent_year", calibration_status: "illustrative", source_agency: "Model (Fixture)" },
 ];
 
-export function MacroTrajectoryPanel({ initialTrajectories }: MacroTrajectoryPanelProps) {
+export function MacroTrajectoryPanel({ initialTrajectories, mode = "source" }: MacroTrajectoryPanelProps) {
   const [selectedIndicator, setSelectedIndicator] = useState<string>("br.ipca.12m");
   const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(null);
   const [showTable, setShowTable] = useState<boolean>(true);
 
-  const trajectories = initialTrajectories && initialTrajectories.length > 0
-    ? initialTrajectories
-    : defaultTrajectories;
+  const isFixtureMode = mode === "fixture";
+  const hasSourceData = initialTrajectories && initialTrajectories.length > 0;
+
+  // Em modo source sem dados, não inventar dados e exibir estado vazio explícito
+  if (!isFixtureMode && !hasSourceData) {
+    return (
+      <section aria-labelledby="trajectories-heading" className="my-8 rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
+        <div className="flex items-center gap-2">
+          <span className="inline-block h-2.5 w-2.5 rounded-full bg-neutral-400"></span>
+          <h2 id="trajectories-heading" className="text-xl font-bold tracking-tight text-neutral-900">
+            Trajetórias Macroeconômicas Multi-Perspectiva
+          </h2>
+        </div>
+        <p className="mt-4 text-sm text-neutral-600">
+          Trajetórias oficiais em modo fonte indisponíveis ou aguardando ingestão na base de dados (modo <code>source</code>).
+        </p>
+      </section>
+    );
+  }
+
+  const trajectories = hasSourceData ? initialTrajectories : defaultTrajectories;
 
   const points = useMemo(() => {
     return trajectories.filter((t) => t.indicator_id === selectedIndicator);
@@ -108,6 +138,8 @@ export function MacroTrajectoryPanel({ initialTrajectories }: MacroTrajectoryPan
       if (p.continuity_value !== null) allVals.push(p.continuity_value);
     });
 
+    if (allVals.length === 0) return null;
+
     const rawMin = Math.min(...allVals);
     const rawMax = Math.max(...allVals);
     const pad = (rawMax - rawMin) * 0.15 || 1;
@@ -120,8 +152,8 @@ export function MacroTrajectoryPanel({ initialTrajectories }: MacroTrajectoryPan
     const chartW = width - padding.left - padding.right;
     const chartH = height - padding.top - padding.bottom;
 
-    const getX = (idx: number) => padding.left + (idx / (points.length - 1)) * chartW;
-    const getY = (val: number) => padding.top + chartH - ((val - minVal) / (maxVal - minVal)) * chartH;
+    const getX = (idx: number) => padding.left + (idx / Math.max(1, points.length - 1)) * chartW;
+    const getY = (val: number) => padding.top + chartH - ((val - minVal) / Math.max(1, maxVal - minVal)) * chartH;
 
     return { width, height, padding, chartW, chartH, minVal, maxVal, getX, getY };
   }, [points]);
@@ -140,16 +172,31 @@ export function MacroTrajectoryPanel({ initialTrajectories }: MacroTrajectoryPan
 
   return (
     <section aria-labelledby="trajectories-heading" className="my-8 rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
+      {/* Banner de Proveniência em Modo Fixture */}
+      {isFixtureMode && (
+        <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 flex flex-col md:flex-row md:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="font-bold uppercase tracking-wider text-[11px] text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded">
+              Demonstrador Hermético (Fixture)
+            </span>
+            <span>
+              Todos os dados e séries históricas nesta visualização são sintéticos/fixtures para testes e desenvolvimento. Não representam publicações oficiais.
+            </span>
+          </div>
+          <span className="text-[10px] text-amber-700 font-mono">mode=fixture</span>
+        </div>
+      )}
+
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between border-b border-neutral-200 pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="inline-block h-2.5 w-2.5 rounded-full bg-blue-600"></span>
+            <span className={`inline-block h-2.5 w-2.5 rounded-full ${isFixtureMode ? "bg-amber-500" : "bg-blue-600"}`}></span>
             <h2 id="trajectories-heading" className="text-xl font-bold tracking-tight text-neutral-900">
               Trajetórias Macroeconômicas Multi-Perspectiva
             </h2>
           </div>
           <p className="text-sm text-neutral-600 mt-1">
-            Confronto temporal entre Realizado Oficial, Metas Institucionais, Baseline Histórico, Forecasts e Cenário Inercial.
+            Confronto temporal entre Realizado, Metas Institucionais, Baseline Histórico, Forecasts e Cenário Inercial.
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs font-medium text-neutral-600 bg-neutral-100 px-3 py-1.5 rounded-lg">
@@ -196,7 +243,9 @@ export function MacroTrajectoryPanel({ initialTrajectories }: MacroTrajectoryPan
         <div className="flex flex-wrap gap-3 text-xs">
           <div className="flex items-center gap-1.5">
             <span className="h-3 w-3 rounded-full bg-neutral-900"></span>
-            <span className="font-medium text-neutral-800">Realizado Oficial</span>
+            <span className="font-medium text-neutral-800">
+              {isFixtureMode ? "Realizado (Sintético / Fixture)" : "Realizado Oficial"}
+            </span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="h-3 w-3 rounded bg-emerald-600"></span>
@@ -388,7 +437,7 @@ export function MacroTrajectoryPanel({ initialTrajectories }: MacroTrajectoryPan
               return null;
             })()}
 
-            {/* Curva Realizado Oficial (Linha preta sólida com marcadores destacados) */}
+            {/* Curva Realizado (Linha preta sólida com marcadores destacados) */}
             {(() => {
               const pts = points
                 .map((p, idx) => ({ p, x: chartMetrics.getX(idx) }))
@@ -418,7 +467,7 @@ export function MacroTrajectoryPanel({ initialTrajectories }: MacroTrajectoryPan
             {/* Zonas Interativas Invisíveis de Hover por Período */}
             {points.map((p, idx) => {
               const x = chartMetrics.getX(idx);
-              const sliceWidth = chartMetrics.chartW / (points.length - 1);
+              const sliceWidth = chartMetrics.chartW / Math.max(1, points.length - 1);
               return (
                 <rect
                   key={`hover-${p.id}`}
@@ -445,7 +494,9 @@ export function MacroTrajectoryPanel({ initialTrajectories }: MacroTrajectoryPan
               </div>
               <div className="flex flex-wrap gap-4">
                 <div>
-                  <span className="text-neutral-400 block text-[10px]">REALIZADO</span>
+                  <span className="text-neutral-400 block text-[10px]">
+                    {isFixtureMode ? "REALIZADO (FIXTURE)" : "REALIZADO"}
+                  </span>
                   <span className="font-bold text-white">
                     {fmtVal(points[hoveredPointIndex].actual_value)}
                   </span>
@@ -513,7 +564,15 @@ export function MacroTrajectoryPanel({ initialTrajectories }: MacroTrajectoryPan
                 {points.map((p) => {
                   const deltaTarget = fmtDelta(p.actual_value, p.target_value);
                   const deltaForecast = fmtDelta(p.actual_value, p.forecast_value);
-                  const isOfficial = p.calibration_status === "official";
+                  const isOfficial = !isFixtureMode && p.calibration_status === "official";
+                  const statusLabel = isFixtureMode
+                    ? "Sintético (Fixture)"
+                    : (isOfficial ? "Oficial verificado" : "Ilustrativo / Em calibração");
+                  const statusClass = isFixtureMode
+                    ? "bg-amber-50 text-amber-800 border border-amber-200"
+                    : (isOfficial
+                      ? "bg-neutral-100 text-neutral-800 border border-neutral-300"
+                      : "bg-blue-50 text-blue-800 border border-blue-200");
 
                   return (
                     <tr key={p.id} className="hover:bg-neutral-50 transition-colors">
@@ -538,13 +597,9 @@ export function MacroTrajectoryPanel({ initialTrajectories }: MacroTrajectoryPan
                       </td>
                       <td className="px-3.5 py-2">
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${
-                            isOfficial
-                              ? "bg-neutral-100 text-neutral-800 border border-neutral-300"
-                              : "bg-blue-50 text-blue-800 border border-blue-200"
-                          }`}
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${statusClass}`}
                         >
-                          {isOfficial ? "Oficial verificado" : "Ilustrativo / Em calibração"}
+                          {statusLabel}
                         </span>
                       </td>
                     </tr>
@@ -562,10 +617,10 @@ export function MacroTrajectoryPanel({ initialTrajectories }: MacroTrajectoryPan
           <svg className="w-4 h-4 text-amber-700" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
           </svg>
-          Salvaguarda Constitucional (specs/mission.md):
+          Salvaguarda Constitucional (specs/mission.md & AGENTS.md):
         </p>
         <p className="mt-1 leading-relaxed text-amber-800">
-          Projeções (Forecasts) e cenários contrafactuais são modelos econométricos e estimativas de mercado experimentais, marcadas expressamente como <strong>Ilustrativas</strong> até ratificação e auditoria humana independente. Desvios numéricos representam grandezas matemáticas entre métricas e premissas, sem atribuição causal prematura ou julgamento de valor político.
+          Projeções (Forecasts) e cenários contrafactuais são modelos econométricos e estimativas de mercado experimentais, marcadas expressamente como <strong>Ilustrativas</strong> até ratificação e auditoria humana independente. Desvios numéricos representam grandezas matemáticas entre métricas e premissas, sem atribuição causal prematura ou julgamento de valor político. Em modo demonstrador (fixture), nenhum valor histórico ou projetado deve ser interpretado como estatística pública oficial.
         </p>
       </div>
     </section>

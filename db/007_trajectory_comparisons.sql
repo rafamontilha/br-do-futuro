@@ -45,16 +45,16 @@ VALUES
     ('traj-ipca-2029', 'br.ipca.12m', '2029-12-01', '2029', NULL, 3.00, 3.20, 2.50, 3.90, 3.00, 3.80, 'percent_year', 'illustrative', 'Guidance/Model', NULL),
     ('traj-ipca-2030', 'br.ipca.12m', '2030-12-01', '2030', NULL, 3.00, 3.00, 2.30, 3.70, 3.00, 3.80, 'percent_year', 'illustrative', 'Guidance/Model', NULL),
 
-    -- 2. Selic meta anualizada (br.selic.daily)
-    ('traj-selic-2022', 'br.selic.daily', '2022-12-01', '2022', 13.75, 9.50, 13.75, 13.00, 14.25, NULL, 13.00, 'percent_year', 'official', 'BCB', '2022-12-31 18:00:00-03'),
-    ('traj-selic-2023', 'br.selic.daily', '2023-12-01', '2023', 11.75, 9.50, 11.75, 11.25, 12.25, NULL, 11.50, 'percent_year', 'official', 'BCB', '2023-12-31 18:00:00-03'),
-    ('traj-selic-2024', 'br.selic.daily', '2024-12-01', '2024', 11.25, 9.50, 11.25, 10.75, 11.75, NULL, 11.00, 'percent_year', 'official', 'BCB', '2024-12-31 18:00:00-03'),
-    ('traj-selic-2025', 'br.selic.daily', '2025-12-01', '2025', NULL, 9.00, 12.25, 11.50, 13.00, NULL, 12.00, 'percent_year', 'illustrative', 'Focus/Model', NULL),
-    ('traj-selic-2026', 'br.selic.daily', '2026-12-01', '2026', NULL, 9.00, 11.50, 10.50, 12.50, NULL, 11.00, 'percent_year', 'illustrative', 'Focus/Model', NULL),
-    ('traj-selic-2027', 'br.selic.daily', '2027-12-01', '2027', NULL, 8.50, 10.00, 9.00, 11.00, NULL, 10.50, 'percent_year', 'illustrative', 'Model', NULL),
-    ('traj-selic-2028', 'br.selic.daily', '2028-12-01', '2028', NULL, 8.50, 9.50, 8.50, 10.50, NULL, 10.00, 'percent_year', 'illustrative', 'Model', NULL),
-    ('traj-selic-2029', 'br.selic.daily', '2029-12-01', '2029', NULL, 8.00, 9.00, 8.00, 10.00, NULL, 9.50, 'percent_year', 'illustrative', 'Model', NULL),
-    ('traj-selic-2030', 'br.selic.daily', '2030-12-01', '2030', NULL, 8.00, 8.50, 7.50, 9.50, NULL, 9.00, 'percent_year', 'illustrative', 'Model', NULL),
+    -- 2. Selic meta anualizada (br.selic.target_annual)
+    ('traj-selic-2022', 'br.selic.target_annual', '2022-12-01', '2022', 13.75, 9.50, 13.75, 13.00, 14.25, NULL, 13.00, 'percent_year', 'official', 'BCB', '2022-12-31 18:00:00-03'),
+    ('traj-selic-2023', 'br.selic.target_annual', '2023-12-01', '2023', 11.75, 9.50, 11.75, 11.25, 12.25, NULL, 11.50, 'percent_year', 'official', 'BCB', '2023-12-31 18:00:00-03'),
+    ('traj-selic-2024', 'br.selic.target_annual', '2024-12-01', '2024', 11.25, 9.50, 11.25, 10.75, 11.75, NULL, 11.00, 'percent_year', 'official', 'BCB', '2024-12-31 18:00:00-03'),
+    ('traj-selic-2025', 'br.selic.target_annual', '2025-12-01', '2025', NULL, 9.00, 12.25, 11.50, 13.00, NULL, 12.00, 'percent_year', 'illustrative', 'Focus/Model', NULL),
+    ('traj-selic-2026', 'br.selic.target_annual', '2026-12-01', '2026', NULL, 9.00, 11.50, 10.50, 12.50, NULL, 11.00, 'percent_year', 'illustrative', 'Focus/Model', NULL),
+    ('traj-selic-2027', 'br.selic.target_annual', '2027-12-01', '2027', NULL, 8.50, 10.00, 9.00, 11.00, NULL, 10.50, 'percent_year', 'illustrative', 'Model', NULL),
+    ('traj-selic-2028', 'br.selic.target_annual', '2028-12-01', '2028', NULL, 8.50, 9.50, 8.50, 10.50, NULL, 10.00, 'percent_year', 'illustrative', 'Model', NULL),
+    ('traj-selic-2029', 'br.selic.target_annual', '2029-12-01', '2029', NULL, 8.00, 9.00, 8.00, 10.00, NULL, 9.50, 'percent_year', 'illustrative', 'Model', NULL),
+    ('traj-selic-2030', 'br.selic.target_annual', '2030-12-01', '2030', NULL, 8.00, 8.50, 7.50, 9.50, NULL, 9.00, 'percent_year', 'illustrative', 'Model', NULL),
 
     -- 3. Dívida bruta do governo geral % PIB (br.debt.gross_pct_gdp)
     ('traj-debt-2022', 'br.debt.gross_pct_gdp', '2022-12-01', '2022', 71.7, 75.0, 72.0, 70.0, 74.0, 70.0, 73.0, 'percent_gdp', 'official', 'BCB/STN', '2023-01-30 09:00:00-03'),
@@ -113,3 +113,9 @@ ON CONFLICT (indicator_id, period_date) DO UPDATE SET
     source_agency = EXCLUDED.source_agency,
     as_of_valid_until = EXCLUDED.as_of_valid_until,
     updated_at = clock_timestamp();
+
+DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='bdf_reader') THEN
+        GRANT SELECT ON indicator_trajectories TO bdf_reader;
+    END IF;
+END $$;

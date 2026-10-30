@@ -145,6 +145,25 @@
       "quality_status": "unavailable"
     },
     {
+      "name": "Meta Selic anualizada (Copom)",
+      "domain": 3,
+      "series": 432,
+      "unit": "percent_year",
+      "frequency": "monthly",
+      "origin": "BCB/SGS",
+      "revisable": false,
+      "indicator_id": "br.selic.target_annual",
+      "geography": "BR",
+      "adjustment": "non-seasonally-adjusted",
+      "owner_role": "Data Steward",
+      "methodology_version": "sgs-contract-v1",
+      "license_status": "pending_review",
+      "calendar_status": "pending_validation",
+      "source_status": "candidate",
+      "source_uri": "https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados",
+      "quality_status": "unavailable"
+    },
+    {
       "name": "Dívida bruta do governo geral",
       "domain": 12,
       "series": 13762,

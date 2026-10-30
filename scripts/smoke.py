@@ -197,7 +197,7 @@ assert obs_metrics['slo_compliance']['source_window_compliance_pct'] >= 99.0
 trajs = get('/v1/trajectories?mode=fixture')['data']
 assert len(trajs) >= 30
 traj_indicators = {t['indicator_id'] for t in trajs}
-assert {'br.ipca.12m', 'br.selic.daily', 'br.debt.gross_pct_gdp', 'br.gdp.quarterly_yoy', 'br.fx.usd_brl.ptax', 'br.labor.unemployment_rate'}.issubset(traj_indicators)
+assert {'br.ipca.12m', 'br.selic.target_annual', 'br.debt.gross_pct_gdp', 'br.gdp.quarterly_yoy', 'br.fx.usd_brl.ptax', 'br.labor.unemployment_rate'}.issubset(traj_indicators)
 
 ipca_trajs = get('/v1/trajectories/br.ipca.12m?mode=fixture')['data']
 assert len(ipca_trajs) >= 9

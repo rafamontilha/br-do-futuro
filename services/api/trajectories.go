@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"context"
 	"encoding/json"
 	"log/slog"
@@ -9,6 +10,9 @@ import (
 	"strings"
 	"time"
 )
+
+//go:embed trajectories.json
+var embeddedTrajectoriesJSON []byte
 
 type TrajectoryPoint struct {
 	ID                string     `json:"id"`
@@ -30,20 +34,28 @@ type TrajectoryPoint struct {
 
 func loadTrajectoriesFixture() ([]TrajectoryPoint, error) {
 	paths := []string{
+		os.Getenv("TRAJECTORIES_FIXTURE_PATH"),
 		"../../fixtures/trajectories.json",
 		"fixtures/trajectories.json",
 		"../fixtures/trajectories.json",
+		"trajectories.json",
 	}
 	var data []byte
 	var err error
 	for _, p := range paths {
+		if p == "" {
+			continue
+		}
 		data, err = os.ReadFile(p)
-		if err == nil {
+		if err == nil && len(data) > 0 {
 			break
 		}
 	}
-	if err != nil {
-		return nil, err
+	if len(data) == 0 && len(embeddedTrajectoriesJSON) > 0 {
+		data = embeddedTrajectoriesJSON
+	}
+	if len(data) == 0 {
+		return nil, os.ErrNotExist
 	}
 	var points []TrajectoryPoint
 	if err := json.Unmarshal(data, &points); err != nil {
