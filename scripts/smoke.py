@@ -193,7 +193,25 @@ assert obs_metrics['models']['active_scenarios_count'] >= 3
 assert obs_metrics['decisions']['audit_chain_intact'] is True
 assert obs_metrics['slo_compliance']['source_window_compliance_pct'] >= 99.0
 
+# 8. Trajetórias macroeconômicas multi-perspectiva em /v1/trajectories
+trajs = get('/v1/trajectories?mode=fixture')['data']
+assert len(trajs) >= 30
+traj_indicators = {t['indicator_id'] for t in trajs}
+assert {'br.ipca.12m', 'br.selic.daily', 'br.debt.gross_pct_gdp', 'br.gdp.quarterly_yoy', 'br.fx.usd_brl.ptax', 'br.labor.unemployment_rate'}.issubset(traj_indicators)
+
+ipca_trajs = get('/v1/trajectories/br.ipca.12m?mode=fixture')['data']
+assert len(ipca_trajs) >= 9
+for t in ipca_trajs:
+    assert t['indicator_id'] == 'br.ipca.12m'
+    if t['forecast_value'] is not None and t['forecast_lower'] is not None and t['forecast_upper'] is not None:
+        assert t['forecast_lower'] <= t['forecast_value'] <= t['forecast_upper']
+
+ipca_past = get('/v1/trajectories?indicator_id=br.ipca.12m&mode=fixture&as_of=2023-01-01T00:00:00Z')['data']
+for t in ipca_past:
+    if t['period_label'] in ('2023', '2024'):
+        assert t['actual_value'] is None
+
 real=get('/v1/observations')['data']
 assert all(o['quality_status']=='provisional' for o in real)
 assert get('/v1/observations')['meta']['mode']=='source'
-print(f'API smoke passed: 6 synthetic points, 3 scenarios, 3 alerts, 7 institutions, dynamic simulations, source health ({len(sources_health)} schedules), outbox replay, {len(proposals)} proposals, {len(commitments)} guidance commitments, {len(calibrations)} calibrations, RBAC auth, rate limiting, pagination and 4-plane observability verified; {len(real)} provisional source points')
+print(f'API smoke passed: 6 synthetic points, 3 scenarios, 3 alerts, 7 institutions, dynamic simulations, source health ({len(sources_health)} schedules), outbox replay, {len(proposals)} proposals, {len(commitments)} guidance commitments, {len(calibrations)} calibrations, RBAC auth, rate limiting, pagination, 4-plane observability, and {len(trajs)} macro trajectories across 6 P0 series verified; {len(real)} provisional source points')

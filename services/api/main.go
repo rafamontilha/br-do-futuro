@@ -636,6 +636,11 @@ func (a *API) handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.URL.Path == "/v1/trajectories" || strings.HasPrefix(r.URL.Path, "/v1/trajectories/") {
+		a.handleGetTrajectories(w, r, ctx, meta, mode, asOf)
+		return
+	}
+
 	var sql string
 	args := []any{mode, asOf}
 	switch {
