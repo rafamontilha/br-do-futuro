@@ -477,4 +477,13 @@ func TestTrajectoriesEndpoints(t *testing.T) {
 			t.Fatalf("expected 404, got %d", w.Code)
 		}
 	})
+
+	t.Run("mode source without db returns 503 and never falls back to fixture", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", "/v1/trajectories?mode=source", nil)
+		a.handle(w, r)
+		if w.Code != http.StatusServiceUnavailable {
+			t.Fatalf("expected 503 for mode=source without db, got %d", w.Code)
+		}
+	})
 }

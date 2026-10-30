@@ -35,6 +35,7 @@ def test_trajectories_fixture_integrity():
         assert pt["period_label"]
         assert pt["calibration_status"] in valid_statuses
         assert pt["source_agency"]
+        assert pt.get("mode") == "fixture"
 
         # Verifica consistência das bandas de incerteza do forecast
         if pt.get("forecast_value") is not None and pt.get("forecast_lower") is not None and pt.get("forecast_upper") is not None:
@@ -86,13 +87,16 @@ def test_db_trajectories_schema_and_seed(db):
             "actual_value", "baseline_value", "forecast_value",
             "forecast_lower", "forecast_upper", "target_value",
             "continuity_value", "unit", "calibration_status",
-            "source_agency", "as_of_valid_until", "created_at", "updated_at"
+            "source_agency", "mode", "as_of_valid_until", "created_at", "updated_at"
         }
         assert expected_cols.issubset(col_names)
 
-        # Verifica contagem de dados seed
-        count = conn.execute("SELECT count(*) FROM indicator_trajectories").fetchone()[0]
-        assert count >= 30, f"expected at least 30 seeded trajectory rows, found {count}"
+        # Verifica isolamento estrito: seeds de demonstração têm mode='fixture' e mode='source' é vazio
+        fixture_count = conn.execute("SELECT count(*) FROM indicator_trajectories WHERE mode = 'fixture'").fetchone()[0]
+        assert fixture_count >= 30, f"expected at least 30 seeded fixture trajectory rows, found {fixture_count}"
+
+        source_count = conn.execute("SELECT count(*) FROM indicator_trajectories WHERE mode = 'source'").fetchone()[0]
+        assert source_count == 0, f"mode=source trajectories must be empty before official observations are ingested, found {source_count}"
 
         # Verifica que o corte temporal bitemporal funciona via SQL
         rows = conn.execute("""

@@ -5,16 +5,17 @@
     "period_date": "2022-12-01",
     "period_label": "2022",
     "actual_value": 5.79,
-    "baseline_value": 5.00,
-    "forecast_value": 5.80,
-    "forecast_lower": 5.20,
-    "forecast_upper": 6.40,
-    "target_value": 3.50,
-    "continuity_value": 5.50,
+    "baseline_value": 5.0,
+    "forecast_value": 5.8,
+    "forecast_lower": 5.2,
+    "forecast_upper": 6.4,
+    "target_value": 3.5,
+    "continuity_value": 5.5,
     "unit": "percent_year",
     "calibration_status": "official",
     "source_agency": "IBGE",
-    "as_of_valid_until": "2023-01-15T12:00:00Z"
+    "as_of_valid_until": "2023-01-15T12:00:00Z",
+    "mode": "fixture"
   },
   {
     "id": "traj-ipca-2023",
@@ -22,16 +23,17 @@
     "period_date": "2023-12-01",
     "period_label": "2023",
     "actual_value": 4.62,
-    "baseline_value": 4.50,
-    "forecast_value": 4.70,
-    "forecast_lower": 4.10,
-    "forecast_upper": 5.30,
+    "baseline_value": 4.5,
+    "forecast_value": 4.7,
+    "forecast_lower": 4.1,
+    "forecast_upper": 5.3,
     "target_value": 3.25,
-    "continuity_value": 4.80,
+    "continuity_value": 4.8,
     "unit": "percent_year",
     "calibration_status": "official",
     "source_agency": "IBGE",
-    "as_of_valid_until": "2024-01-15T12:00:00Z"
+    "as_of_valid_until": "2024-01-15T12:00:00Z",
+    "mode": "fixture"
   },
   {
     "id": "traj-ipca-2024",
@@ -39,16 +41,17 @@
     "period_date": "2024-12-01",
     "period_label": "2024",
     "actual_value": 4.83,
-    "baseline_value": 4.00,
-    "forecast_value": 4.60,
-    "forecast_lower": 4.00,
-    "forecast_upper": 5.20,
-    "target_value": 3.00,
-    "continuity_value": 4.50,
+    "baseline_value": 4.0,
+    "forecast_value": 4.6,
+    "forecast_lower": 4.0,
+    "forecast_upper": 5.2,
+    "target_value": 3.0,
+    "continuity_value": 4.5,
     "unit": "percent_year",
     "calibration_status": "official",
     "source_agency": "IBGE",
-    "as_of_valid_until": "2025-01-15T12:00:00Z"
+    "as_of_valid_until": "2025-01-15T12:00:00Z",
+    "mode": "fixture"
   },
   {
     "id": "traj-ipca-2025",
@@ -56,16 +59,17 @@
     "period_date": "2025-12-01",
     "period_label": "2025",
     "actual_value": null,
-    "baseline_value": 3.50,
-    "forecast_value": 3.90,
-    "forecast_lower": 3.20,
-    "forecast_upper": 4.60,
-    "target_value": 3.00,
-    "continuity_value": 4.20,
+    "baseline_value": 3.5,
+    "forecast_value": 3.9,
+    "forecast_lower": 3.2,
+    "forecast_upper": 4.6,
+    "target_value": 3.0,
+    "continuity_value": 4.2,
     "unit": "percent_year",
     "calibration_status": "illustrative",
     "source_agency": "Focus/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-ipca-2026",
@@ -73,16 +77,17 @@
     "period_date": "2026-12-01",
     "period_label": "2026",
     "actual_value": null,
-    "baseline_value": 3.50,
-    "forecast_value": 3.60,
-    "forecast_lower": 3.00,
-    "forecast_upper": 4.30,
-    "target_value": 3.00,
-    "continuity_value": 4.10,
+    "baseline_value": 3.5,
+    "forecast_value": 3.6,
+    "forecast_lower": 3.0,
+    "forecast_upper": 4.3,
+    "target_value": 3.0,
+    "continuity_value": 4.1,
     "unit": "percent_year",
     "calibration_status": "illustrative",
     "source_agency": "Focus/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-ipca-2027",
@@ -90,16 +95,17 @@
     "period_date": "2027-12-01",
     "period_label": "2027",
     "actual_value": null,
-    "baseline_value": 3.00,
-    "forecast_value": 3.50,
-    "forecast_lower": 2.80,
-    "forecast_upper": 4.20,
-    "target_value": 3.00,
-    "continuity_value": 4.00,
+    "baseline_value": 3.0,
+    "forecast_value": 3.5,
+    "forecast_lower": 2.8,
+    "forecast_upper": 4.2,
+    "target_value": 3.0,
+    "continuity_value": 4.0,
     "unit": "percent_year",
     "calibration_status": "illustrative",
     "source_agency": "Guidance/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-ipca-2028",
@@ -107,16 +113,17 @@
     "period_date": "2028-12-01",
     "period_label": "2028",
     "actual_value": null,
-    "baseline_value": 3.00,
-    "forecast_value": 3.30,
-    "forecast_lower": 2.60,
-    "forecast_upper": 4.00,
-    "target_value": 3.00,
-    "continuity_value": 3.90,
+    "baseline_value": 3.0,
+    "forecast_value": 3.3,
+    "forecast_lower": 2.6,
+    "forecast_upper": 4.0,
+    "target_value": 3.0,
+    "continuity_value": 3.9,
     "unit": "percent_year",
     "calibration_status": "illustrative",
     "source_agency": "Guidance/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-ipca-2029",
@@ -124,16 +131,17 @@
     "period_date": "2029-12-01",
     "period_label": "2029",
     "actual_value": null,
-    "baseline_value": 3.00,
-    "forecast_value": 3.20,
-    "forecast_lower": 2.50,
-    "forecast_upper": 3.90,
-    "target_value": 3.00,
-    "continuity_value": 3.80,
+    "baseline_value": 3.0,
+    "forecast_value": 3.2,
+    "forecast_lower": 2.5,
+    "forecast_upper": 3.9,
+    "target_value": 3.0,
+    "continuity_value": 3.8,
     "unit": "percent_year",
     "calibration_status": "illustrative",
     "source_agency": "Guidance/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-ipca-2030",
@@ -141,16 +149,17 @@
     "period_date": "2030-12-01",
     "period_label": "2030",
     "actual_value": null,
-    "baseline_value": 3.00,
-    "forecast_value": 3.00,
-    "forecast_lower": 2.30,
-    "forecast_upper": 3.70,
-    "target_value": 3.00,
-    "continuity_value": 3.80,
+    "baseline_value": 3.0,
+    "forecast_value": 3.0,
+    "forecast_lower": 2.3,
+    "forecast_upper": 3.7,
+    "target_value": 3.0,
+    "continuity_value": 3.8,
     "unit": "percent_year",
     "calibration_status": "illustrative",
     "source_agency": "Guidance/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-selic-2022",
@@ -158,16 +167,17 @@
     "period_date": "2022-12-01",
     "period_label": "2022",
     "actual_value": 13.75,
-    "baseline_value": 9.50,
+    "baseline_value": 9.5,
     "forecast_value": 13.75,
-    "forecast_lower": 13.00,
+    "forecast_lower": 13.0,
     "forecast_upper": 14.25,
     "target_value": null,
-    "continuity_value": 13.00,
+    "continuity_value": 13.0,
     "unit": "percent_year",
     "calibration_status": "official",
     "source_agency": "BCB",
-    "as_of_valid_until": "2022-12-31T21:00:00Z"
+    "as_of_valid_until": "2022-12-31T21:00:00Z",
+    "mode": "fixture"
   },
   {
     "id": "traj-selic-2023",
@@ -175,16 +185,17 @@
     "period_date": "2023-12-01",
     "period_label": "2023",
     "actual_value": 11.75,
-    "baseline_value": 9.50,
+    "baseline_value": 9.5,
     "forecast_value": 11.75,
     "forecast_lower": 11.25,
     "forecast_upper": 12.25,
     "target_value": null,
-    "continuity_value": 11.50,
+    "continuity_value": 11.5,
     "unit": "percent_year",
     "calibration_status": "official",
     "source_agency": "BCB",
-    "as_of_valid_until": "2023-12-31T21:00:00Z"
+    "as_of_valid_until": "2023-12-31T21:00:00Z",
+    "mode": "fixture"
   },
   {
     "id": "traj-selic-2024",
@@ -192,16 +203,17 @@
     "period_date": "2024-12-01",
     "period_label": "2024",
     "actual_value": 11.25,
-    "baseline_value": 9.50,
+    "baseline_value": 9.5,
     "forecast_value": 11.25,
     "forecast_lower": 10.75,
     "forecast_upper": 11.75,
     "target_value": null,
-    "continuity_value": 11.00,
+    "continuity_value": 11.0,
     "unit": "percent_year",
     "calibration_status": "official",
     "source_agency": "BCB",
-    "as_of_valid_until": "2024-12-31T21:00:00Z"
+    "as_of_valid_until": "2024-12-31T21:00:00Z",
+    "mode": "fixture"
   },
   {
     "id": "traj-selic-2025",
@@ -209,16 +221,17 @@
     "period_date": "2025-12-01",
     "period_label": "2025",
     "actual_value": null,
-    "baseline_value": 9.00,
+    "baseline_value": 9.0,
     "forecast_value": 12.25,
-    "forecast_lower": 11.50,
-    "forecast_upper": 13.00,
+    "forecast_lower": 11.5,
+    "forecast_upper": 13.0,
     "target_value": null,
-    "continuity_value": 12.00,
+    "continuity_value": 12.0,
     "unit": "percent_year",
     "calibration_status": "illustrative",
     "source_agency": "Focus/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-selic-2026",
@@ -226,16 +239,17 @@
     "period_date": "2026-12-01",
     "period_label": "2026",
     "actual_value": null,
-    "baseline_value": 9.00,
-    "forecast_value": 11.50,
-    "forecast_lower": 10.50,
-    "forecast_upper": 12.50,
+    "baseline_value": 9.0,
+    "forecast_value": 11.5,
+    "forecast_lower": 10.5,
+    "forecast_upper": 12.5,
     "target_value": null,
-    "continuity_value": 11.00,
+    "continuity_value": 11.0,
     "unit": "percent_year",
     "calibration_status": "illustrative",
     "source_agency": "Focus/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-selic-2027",
@@ -243,16 +257,17 @@
     "period_date": "2027-12-01",
     "period_label": "2027",
     "actual_value": null,
-    "baseline_value": 8.50,
-    "forecast_value": 10.00,
-    "forecast_lower": 9.00,
-    "forecast_upper": 11.00,
+    "baseline_value": 8.5,
+    "forecast_value": 10.0,
+    "forecast_lower": 9.0,
+    "forecast_upper": 11.0,
     "target_value": null,
-    "continuity_value": 10.50,
+    "continuity_value": 10.5,
     "unit": "percent_year",
     "calibration_status": "illustrative",
     "source_agency": "Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-selic-2028",
@@ -260,16 +275,17 @@
     "period_date": "2028-12-01",
     "period_label": "2028",
     "actual_value": null,
-    "baseline_value": 8.50,
-    "forecast_value": 9.50,
-    "forecast_lower": 8.50,
-    "forecast_upper": 10.50,
+    "baseline_value": 8.5,
+    "forecast_value": 9.5,
+    "forecast_lower": 8.5,
+    "forecast_upper": 10.5,
     "target_value": null,
-    "continuity_value": 10.00,
+    "continuity_value": 10.0,
     "unit": "percent_year",
     "calibration_status": "illustrative",
     "source_agency": "Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-selic-2029",
@@ -277,16 +293,17 @@
     "period_date": "2029-12-01",
     "period_label": "2029",
     "actual_value": null,
-    "baseline_value": 8.00,
-    "forecast_value": 9.00,
-    "forecast_lower": 8.00,
-    "forecast_upper": 10.00,
+    "baseline_value": 8.0,
+    "forecast_value": 9.0,
+    "forecast_lower": 8.0,
+    "forecast_upper": 10.0,
     "target_value": null,
-    "continuity_value": 9.50,
+    "continuity_value": 9.5,
     "unit": "percent_year",
     "calibration_status": "illustrative",
     "source_agency": "Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-selic-2030",
@@ -294,16 +311,17 @@
     "period_date": "2030-12-01",
     "period_label": "2030",
     "actual_value": null,
-    "baseline_value": 8.00,
-    "forecast_value": 8.50,
-    "forecast_lower": 7.50,
-    "forecast_upper": 9.50,
+    "baseline_value": 8.0,
+    "forecast_value": 8.5,
+    "forecast_lower": 7.5,
+    "forecast_upper": 9.5,
     "target_value": null,
-    "continuity_value": 9.00,
+    "continuity_value": 9.0,
     "unit": "percent_year",
     "calibration_status": "illustrative",
     "source_agency": "Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-debt-2022",
@@ -320,7 +338,8 @@
     "unit": "percent_gdp",
     "calibration_status": "official",
     "source_agency": "BCB/STN",
-    "as_of_valid_until": "2023-01-30T12:00:00Z"
+    "as_of_valid_until": "2023-01-30T12:00:00Z",
+    "mode": "fixture"
   },
   {
     "id": "traj-debt-2023",
@@ -337,7 +356,8 @@
     "unit": "percent_gdp",
     "calibration_status": "official",
     "source_agency": "BCB/STN",
-    "as_of_valid_until": "2024-01-30T12:00:00Z"
+    "as_of_valid_until": "2024-01-30T12:00:00Z",
+    "mode": "fixture"
   },
   {
     "id": "traj-debt-2024",
@@ -354,7 +374,8 @@
     "unit": "percent_gdp",
     "calibration_status": "official",
     "source_agency": "BCB/STN",
-    "as_of_valid_until": "2025-01-30T12:00:00Z"
+    "as_of_valid_until": "2025-01-30T12:00:00Z",
+    "mode": "fixture"
   },
   {
     "id": "traj-debt-2025",
@@ -371,7 +392,8 @@
     "unit": "percent_gdp",
     "calibration_status": "illustrative",
     "source_agency": "Model/STN",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-debt-2026",
@@ -388,7 +410,8 @@
     "unit": "percent_gdp",
     "calibration_status": "illustrative",
     "source_agency": "Model/STN",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-debt-2027",
@@ -405,7 +428,8 @@
     "unit": "percent_gdp",
     "calibration_status": "illustrative",
     "source_agency": "Guidance/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-debt-2028",
@@ -422,7 +446,8 @@
     "unit": "percent_gdp",
     "calibration_status": "illustrative",
     "source_agency": "Guidance/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-debt-2029",
@@ -439,7 +464,8 @@
     "unit": "percent_gdp",
     "calibration_status": "illustrative",
     "source_agency": "Guidance/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-debt-2030",
@@ -456,7 +482,8 @@
     "unit": "percent_gdp",
     "calibration_status": "illustrative",
     "source_agency": "Guidance/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-gdp-2022",
@@ -473,7 +500,8 @@
     "unit": "percent_yoy",
     "calibration_status": "official",
     "source_agency": "IBGE",
-    "as_of_valid_until": "2023-03-02T12:00:00Z"
+    "as_of_valid_until": "2023-03-02T12:00:00Z",
+    "mode": "fixture"
   },
   {
     "id": "traj-gdp-2023",
@@ -490,7 +518,8 @@
     "unit": "percent_yoy",
     "calibration_status": "official",
     "source_agency": "IBGE",
-    "as_of_valid_until": "2024-03-01T12:00:00Z"
+    "as_of_valid_until": "2024-03-01T12:00:00Z",
+    "mode": "fixture"
   },
   {
     "id": "traj-gdp-2024",
@@ -507,7 +536,8 @@
     "unit": "percent_yoy",
     "calibration_status": "official",
     "source_agency": "IBGE",
-    "as_of_valid_until": "2025-03-01T12:00:00Z"
+    "as_of_valid_until": "2025-03-01T12:00:00Z",
+    "mode": "fixture"
   },
   {
     "id": "traj-gdp-2025",
@@ -524,7 +554,8 @@
     "unit": "percent_yoy",
     "calibration_status": "illustrative",
     "source_agency": "Focus/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-gdp-2026",
@@ -541,7 +572,8 @@
     "unit": "percent_yoy",
     "calibration_status": "illustrative",
     "source_agency": "Focus/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-gdp-2027",
@@ -558,7 +590,8 @@
     "unit": "percent_yoy",
     "calibration_status": "illustrative",
     "source_agency": "Guidance/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-gdp-2028",
@@ -575,7 +608,8 @@
     "unit": "percent_yoy",
     "calibration_status": "illustrative",
     "source_agency": "Guidance/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-gdp-2029",
@@ -592,7 +626,8 @@
     "unit": "percent_yoy",
     "calibration_status": "illustrative",
     "source_agency": "Guidance/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-gdp-2030",
@@ -609,7 +644,8 @@
     "unit": "percent_yoy",
     "calibration_status": "illustrative",
     "source_agency": "Guidance/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-fx-2022",
@@ -617,16 +653,17 @@
     "period_date": "2022-12-01",
     "period_label": "2022",
     "actual_value": 5.28,
-    "baseline_value": 5.10,
+    "baseline_value": 5.1,
     "forecast_value": 5.25,
-    "forecast_lower": 4.90,
-    "forecast_upper": 5.60,
+    "forecast_lower": 4.9,
+    "forecast_upper": 5.6,
     "target_value": null,
-    "continuity_value": 5.30,
+    "continuity_value": 5.3,
     "unit": "brl_per_usd",
     "calibration_status": "official",
     "source_agency": "BCB",
-    "as_of_valid_until": "2022-12-31T21:00:00Z"
+    "as_of_valid_until": "2022-12-31T21:00:00Z",
+    "mode": "fixture"
   },
   {
     "id": "traj-fx-2023",
@@ -634,16 +671,17 @@
     "period_date": "2023-12-01",
     "period_label": "2023",
     "actual_value": 4.86,
-    "baseline_value": 5.10,
-    "forecast_value": 4.90,
-    "forecast_lower": 4.60,
-    "forecast_upper": 5.20,
+    "baseline_value": 5.1,
+    "forecast_value": 4.9,
+    "forecast_lower": 4.6,
+    "forecast_upper": 5.2,
     "target_value": null,
-    "continuity_value": 5.00,
+    "continuity_value": 5.0,
     "unit": "brl_per_usd",
     "calibration_status": "official",
     "source_agency": "BCB",
-    "as_of_valid_until": "2023-12-31T21:00:00Z"
+    "as_of_valid_until": "2023-12-31T21:00:00Z",
+    "mode": "fixture"
   },
   {
     "id": "traj-fx-2024",
@@ -652,15 +690,16 @@
     "period_label": "2024",
     "actual_value": 5.75,
     "baseline_value": 5.15,
-    "forecast_value": 5.60,
-    "forecast_lower": 5.20,
-    "forecast_upper": 6.00,
+    "forecast_value": 5.6,
+    "forecast_lower": 5.2,
+    "forecast_upper": 6.0,
     "target_value": null,
-    "continuity_value": 5.80,
+    "continuity_value": 5.8,
     "unit": "brl_per_usd",
     "calibration_status": "official",
     "source_agency": "BCB",
-    "as_of_valid_until": "2024-12-31T21:00:00Z"
+    "as_of_valid_until": "2024-12-31T21:00:00Z",
+    "mode": "fixture"
   },
   {
     "id": "traj-fx-2025",
@@ -668,16 +707,17 @@
     "period_date": "2025-12-01",
     "period_label": "2025",
     "actual_value": null,
-    "baseline_value": 5.20,
+    "baseline_value": 5.2,
     "forecast_value": 5.85,
-    "forecast_lower": 5.50,
-    "forecast_upper": 6.20,
+    "forecast_lower": 5.5,
+    "forecast_upper": 6.2,
     "target_value": null,
-    "continuity_value": 6.00,
+    "continuity_value": 6.0,
     "unit": "brl_per_usd",
     "calibration_status": "illustrative",
     "source_agency": "Focus/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-fx-2026",
@@ -686,7 +726,7 @@
     "period_label": "2026",
     "actual_value": null,
     "baseline_value": 5.25,
-    "forecast_value": 5.90,
+    "forecast_value": 5.9,
     "forecast_lower": 5.45,
     "forecast_upper": 6.35,
     "target_value": null,
@@ -694,7 +734,8 @@
     "unit": "brl_per_usd",
     "calibration_status": "illustrative",
     "source_agency": "Focus/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-fx-2027",
@@ -702,16 +743,17 @@
     "period_date": "2027-12-01",
     "period_label": "2027",
     "actual_value": null,
-    "baseline_value": 5.30,
-    "forecast_value": 5.80,
-    "forecast_lower": 5.30,
-    "forecast_upper": 6.30,
+    "baseline_value": 5.3,
+    "forecast_value": 5.8,
+    "forecast_lower": 5.3,
+    "forecast_upper": 6.3,
     "target_value": null,
     "continuity_value": 6.25,
     "unit": "brl_per_usd",
     "calibration_status": "illustrative",
     "source_agency": "Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-fx-2028",
@@ -719,16 +761,17 @@
     "period_date": "2028-12-01",
     "period_label": "2028",
     "actual_value": null,
-    "baseline_value": 5.30,
+    "baseline_value": 5.3,
     "forecast_value": 5.75,
-    "forecast_lower": 5.20,
-    "forecast_upper": 6.30,
+    "forecast_lower": 5.2,
+    "forecast_upper": 6.3,
     "target_value": null,
     "continuity_value": 6.35,
     "unit": "brl_per_usd",
     "calibration_status": "illustrative",
     "source_agency": "Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-fx-2029",
@@ -737,15 +780,16 @@
     "period_label": "2029",
     "actual_value": null,
     "baseline_value": 5.35,
-    "forecast_value": 5.70,
-    "forecast_lower": 5.10,
-    "forecast_upper": 6.30,
+    "forecast_value": 5.7,
+    "forecast_lower": 5.1,
+    "forecast_upper": 6.3,
     "target_value": null,
     "continuity_value": 6.45,
     "unit": "brl_per_usd",
     "calibration_status": "illustrative",
     "source_agency": "Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-fx-2030",
@@ -755,14 +799,15 @@
     "actual_value": null,
     "baseline_value": 5.35,
     "forecast_value": 5.65,
-    "forecast_lower": 5.00,
-    "forecast_upper": 6.30,
+    "forecast_lower": 5.0,
+    "forecast_upper": 6.3,
     "target_value": null,
-    "continuity_value": 6.50,
+    "continuity_value": 6.5,
     "unit": "brl_per_usd",
     "calibration_status": "illustrative",
     "source_agency": "Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-unemp-2022",
@@ -779,7 +824,8 @@
     "unit": "percent",
     "calibration_status": "official",
     "source_agency": "IBGE",
-    "as_of_valid_until": "2023-01-31T12:00:00Z"
+    "as_of_valid_until": "2023-01-31T12:00:00Z",
+    "mode": "fixture"
   },
   {
     "id": "traj-unemp-2023",
@@ -796,7 +842,8 @@
     "unit": "percent",
     "calibration_status": "official",
     "source_agency": "IBGE",
-    "as_of_valid_until": "2024-01-31T12:00:00Z"
+    "as_of_valid_until": "2024-01-31T12:00:00Z",
+    "mode": "fixture"
   },
   {
     "id": "traj-unemp-2024",
@@ -813,7 +860,8 @@
     "unit": "percent",
     "calibration_status": "official",
     "source_agency": "IBGE",
-    "as_of_valid_until": "2025-01-31T12:00:00Z"
+    "as_of_valid_until": "2025-01-31T12:00:00Z",
+    "mode": "fixture"
   },
   {
     "id": "traj-unemp-2025",
@@ -830,7 +878,8 @@
     "unit": "percent",
     "calibration_status": "illustrative",
     "source_agency": "Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-unemp-2026",
@@ -847,7 +896,8 @@
     "unit": "percent",
     "calibration_status": "illustrative",
     "source_agency": "Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-unemp-2027",
@@ -864,7 +914,8 @@
     "unit": "percent",
     "calibration_status": "illustrative",
     "source_agency": "Guidance/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-unemp-2028",
@@ -881,7 +932,8 @@
     "unit": "percent",
     "calibration_status": "illustrative",
     "source_agency": "Guidance/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-unemp-2029",
@@ -898,7 +950,8 @@
     "unit": "percent",
     "calibration_status": "illustrative",
     "source_agency": "Guidance/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   },
   {
     "id": "traj-unemp-2030",
@@ -915,6 +968,7 @@
     "unit": "percent",
     "calibration_status": "illustrative",
     "source_agency": "Guidance/Model",
-    "as_of_valid_until": null
+    "as_of_valid_until": null,
+    "mode": "fixture"
   }
 ]
