@@ -487,3 +487,96 @@ func TestTrajectoriesEndpoints(t *testing.T) {
 		}
 	})
 }
+
+func TestDependenciesEndpoint(t *testing.T) {
+	a := &API{catalog: []byte(`{"domains":[],"indicators":[]}`), rateLimiter: NewRateLimiter()}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/v1/dependencies", nil)
+	a.handle(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	var resp struct {
+		Meta map[string]any `json:"meta"`
+		Data struct {
+			Nodes []DependencyNode `json:"nodes"`
+			Edges []DependencyEdge `json:"edges"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if len(resp.Data.Nodes) == 0 {
+		t.Fatal("expected at least 1 node in dependency graph")
+	}
+	if len(resp.Data.Edges) == 0 {
+		t.Fatal("expected at least 1 edge in dependency graph")
+	}
+
+	// Verify debt node and edge presence
+	foundDebtNode := false
+	for _, n := range resp.Data.Nodes {
+		if n.ID == "indicator:br.debt.gross_pct_gdp" {
+			foundDebtNode = true
+			break
+		}
+	}
+	if !foundDebtNode {
+		t.Errorf("expected indicator:br.debt.gross_pct_gdp in nodes")
+	}
+}
+
+func TestAlertReviewValidation(t *testing.T) {
+	a := &API{catalog: []byte(`{"domains":[],"indicators":[]}`), rateLimiter: NewRateLimiter()}
+
+	t.Run("unauthenticated returns 401", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("POST", "/v1/alerts/alert-test-01/review", strings.NewReader(`{"action":"approve","justification":"Revisão metodológica concluída formalmente"}`))
+		a.handle(w, r)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401, got %d", w.Code)
+		}
+	})
+
+	t.Run("producer role returns 403", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("POST", "/v1/alerts/alert-test-01/review", strings.NewReader(`{"action":"approve","justification":"Revisão metodológica concluída formalmente"}`))
+		r.Header.Set("X-API-Key", "bdf-producer-token-2026")
+		a.handle(w, r)
+		if w.Code != http.StatusForbidden {
+			t.Fatalf("expected 403, got %d", w.Code)
+		}
+	})
+
+	t.Run("reviewer role with short justification returns 400", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("POST", "/v1/alerts/alert-test-01/review", strings.NewReader(`{"action":"approve","justification":"curta"}`))
+		r.Header.Set("X-API-Key", "bdf-reviewer-token-2026")
+		a.handle(w, r)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("reviewer role with invalid action returns 400", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("POST", "/v1/alerts/alert-test-01/review", strings.NewReader(`{"action":"ignore","justification":"Justificativa técnica detalhada e válida"}`))
+		r.Header.Set("X-API-Key", "bdf-reviewer-token-2026")
+		a.handle(w, r)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("reviewer role with valid body returns 503 without db", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("POST", "/v1/alerts/alert-test-01/review", strings.NewReader(`{"action":"approve","justification":"Revisão metodológica independente concluída satisfatoriamente"}`))
+		r.Header.Set("X-API-Key", "bdf-reviewer-token-2026")
+		a.handle(w, r)
+		if w.Code != http.StatusServiceUnavailable {
+			t.Fatalf("expected 503, got %d", w.Code)
+		}
+	})
+}

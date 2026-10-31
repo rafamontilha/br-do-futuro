@@ -2,11 +2,11 @@
 
 ## Automated
 
-- [ ] `pytest tests/test_trajectories.py` e testes de contratos passam sem erros.
-- [ ] `go test -v ./...` e `go vet ./...` no diretório `services/api` executam com sucesso.
-- [ ] `npm run build` no diretório `web` conclui sem erros de tipagem TypeScript ou de lint.
-- [ ] `git diff --check` não acusa espaços em branco espúrios ou problemas de formatação.
-- [ ] `python scripts/smoke.py` valida as rotas `/v1/trajectories` e a consistência das 5 curvas.
+- [x] `pytest tests/test_trajectories.py` e testes de contratos passam sem erros.
+- [x] `go test -v ./...` e `go vet ./...` no diretório `services/api` executam com sucesso.
+- [x] `npm run build` no diretório `web` conclui sem erros de tipagem TypeScript ou de lint.
+- [x] `git diff --check` não acusa espaços em branco espúrios ou problemas de formatação.
+- [x] `python scripts/smoke.py` valida as rotas `/v1/trajectories` e a consistência das 5 curvas.
 
 ### Key assertions
 
@@ -42,8 +42,8 @@
 
 ## Definition of done
 
-- [ ] Todos os testes automatizados (pytest, go test, npm build) passam com 100% de sucesso.
-- [ ] Walkthrough manual executado confirmando renderização responsiva em desktop e mobile.
-- [ ] Migração de banco de dados `db/007_trajectory_comparisons.sql` testada no ambiente isolado `bdf_test`.
-- [ ] Pull Request aberto e referenciando os documentos vinculantes desta especificação (`requirements.md`, `plan.md`, `validation.md`).
-- [ ] Itens do Roadmap correspondentes atualizados.
+- [x] Todos os testes automatizados (pytest, go test, npm build) passam com 100% de sucesso.
+- [x] Walkthrough manual executado confirmando renderização responsiva em desktop e mobile.
+- [x] Migração de banco de dados `db/007_trajectory_comparisons.sql` testada no ambiente isolado `bdf_test`.
+- [x] Pull Request [#7](https://github.com/rafamontilha/br-do-futuro/pull/7) aberto, revisado e aprovado pelo Codex (`👍`), referenciando os documentos vinculantes desta especificação (`requirements.md`, `plan.md`, `validation.md`).
+- [x] Itens do Roadmap correspondentes atualizados.

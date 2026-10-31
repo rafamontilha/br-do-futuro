@@ -16,6 +16,7 @@ services:
       - ./db/005_audit_logs_and_security.sql:/docker-entrypoint-initdb.d/005.sql:ro
       - ./db/006_expand_p0_indicators.sql:/docker-entrypoint-initdb.d/006.sql:ro
       - ./db/007_trajectory_comparisons.sql:/docker-entrypoint-initdb.d/007.sql:ro
+      - ./db/008_dependency_engine_and_reviews.sql:/docker-entrypoint-initdb.d/008.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U bdf -d bdf"]
       interval: 2s

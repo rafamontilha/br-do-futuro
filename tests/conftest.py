@@ -17,9 +17,11 @@ def db():
         conn.execute(Path("db/005_audit_logs_and_security.sql").read_text())
         conn.execute(Path("db/006_expand_p0_indicators.sql").read_text())
         conn.execute(Path("db/007_trajectory_comparisons.sql").read_text())
-        conn.execute("TRUNCATE alert,scenario_run,outbox,observation,vintage,ingestion_run,raw_capture,dynamic_simulations,outbox_replay_audit,public_proposals,guidance_commitments,fiscal_calibrations,system_api_keys,decision_audit_log,indicator_trajectories CASCADE")
+        conn.execute(Path("db/008_dependency_engine_and_reviews.sql").read_text())
+        conn.execute("TRUNCATE alert,scenario_run,outbox,observation,vintage,ingestion_run,raw_capture,dynamic_simulations,outbox_replay_audit,public_proposals,guidance_commitments,fiscal_calibrations,system_api_keys,decision_audit_log,indicator_trajectories,recalculation_plan,dependency_graph_edges,dependency_graph_nodes CASCADE")
         conn.execute(Path("db/004_proposals_and_guidance.sql").read_text())
         conn.execute(Path("db/005_audit_logs_and_security.sql").read_text())
         conn.execute(Path("db/006_expand_p0_indicators.sql").read_text())
         conn.execute(Path("db/007_trajectory_comparisons.sql").read_text())
+        conn.execute(Path("db/008_dependency_engine_and_reviews.sql").read_text())
     return dsn

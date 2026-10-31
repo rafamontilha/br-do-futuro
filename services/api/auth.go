@@ -27,6 +27,9 @@ type AuthContext struct {
 }
 
 func parseBearerToken(r *http.Request) string {
+	if apiKey := r.Header.Get("X-API-Key"); apiKey != "" {
+		return strings.TrimSpace(apiKey)
+	}
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		return ""

@@ -14,6 +14,8 @@ export async function GET(
   const headers = new Headers();
   const auth = request.headers.get("authorization");
   if (auth) headers.set("authorization", auth);
+  const apiKey = request.headers.get("x-api-key");
+  if (apiKey) headers.set("x-api-key", apiKey);
   const role = request.headers.get("x-actor-role");
   if (role) headers.set("x-actor-role", role);
 
@@ -46,6 +48,8 @@ export async function POST(
   headers.set("content-type", "application/json");
   const auth = request.headers.get("authorization");
   if (auth) headers.set("authorization", auth);
+  const apiKey = request.headers.get("x-api-key");
+  if (apiKey) headers.set("x-api-key", apiKey);
   const role = request.headers.get("x-actor-role");
   if (role) headers.set("x-actor-role", role);
 

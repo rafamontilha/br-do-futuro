@@ -8,6 +8,8 @@ import { GuidanceCommitmentsMatrix, type GuidanceCommitment } from "./components
 import { GovernanceAndObservabilitySection } from "./components/GovernanceAndObservabilitySection";
 import { type ObservabilityData } from "./components/ObservabilityPlanesPanel";
 import { MacroTrajectoryPanel, type TrajectoryPoint } from "./components/MacroTrajectoryPanel";
+import { MaterialAlertsSection } from "./components/MaterialAlertsSection";
+import { type AlertItem } from "./components/HumanReviewWorkflowModal";
 
 export const dynamic = "force-dynamic";
 type Observation = {
@@ -27,12 +29,7 @@ type Scenario = {
   outputs: { horizon_years: number; debt_pct_gdp: string }[];
   inputs: { reference_period: string; assumptions: Record<string, string> };
 };
-type Alert = {
-  id: string;
-  severity: string;
-  review_status: string;
-  evidence: { delta_pp: string };
-};
+type Alert = AlertItem;
 type Catalog = {
   domains: { id: number; name: string; coverage: string }[];
   indicators: {
@@ -342,28 +339,7 @@ export default async function Page({
         )}
       </section>
       <DynamicSimulationSection initialBaseDebt={baseDebtValue} />
-      <section>
-        <div className="section-title">
-          <h2>Revisão humana</h2>
-          <span>PUBLICAÇÃO MATERIAL BLOQUEADA</span>
-        </div>
-        {alerts?.data.length ? (
-          <ul className="alerts">
-            {alerts.data.map((a) => (
-              <li key={a.id}>
-                <strong>
-                  Impacto material: {fmt(Number(a.evidence.delta_pp))} p.p.
-                </strong>
-                <span>
-                  Aguardando revisão humana · limiar experimental de 0,5 p.p.
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="empty">Nenhum alerta material registrado neste modo.</p>
-        )}
-      </section>
+      <MaterialAlertsSection initialAlerts={alerts?.data} mode={mode} />
       <GovernanceAndObservabilitySection initialMetrics={observability?.data} />
       <MacroTrajectoryPanel initialTrajectories={trajectories?.data} mode={mode} />
       <PolicyLabPortfolio initialProposals={proposals?.data} />

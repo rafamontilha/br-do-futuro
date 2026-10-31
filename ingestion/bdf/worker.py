@@ -7,7 +7,10 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from opentelemetry import trace
 
+import uuid
 from .scenario import DEPENDENCIES, SCENARIOS, MODEL_VERSION, fiscal_path, fingerprint
+from .dependency_engine import resolve_recalculation_plan
+from .materiality import evaluate_materiality
 
 
 def process_event(conn, event):
@@ -40,7 +43,18 @@ def process_event(conn, event):
 
     if event["event_type"] not in ("EconomicIndicatorUpdated", "HistoricalSeriesRevised"):
         return
-    for scenario_id in DEPENDENCIES.get(p["indicator_id"], []):
+
+    # 1. Resolve DAG dependency plan and selective recalculation scope
+    plan = resolve_recalculation_plan(conn, event)
+    affected_scenario_ids = [
+        node["node_id"].split(":", 1)[1]
+        for node in plan.get("affected_nodes", [])
+        if node["node_id"].startswith("scenario:") and node["node_id"].split(":", 1)[1] in SCENARIOS
+    ]
+    if not affected_scenario_ids:
+        affected_scenario_ids = DEPENDENCIES.get(p["indicator_id"], [])
+
+    for scenario_id in affected_scenario_ids:
         # Only information already visible at this event's ingestion time may be used.
         observation = conn.execute("""SELECT o.*,v.known_at FROM observation o
             JOIN vintage v ON v.id=o.vintage_id WHERE indicator_id=%s AND mode=%s
@@ -62,15 +76,34 @@ def process_event(conn, event):
         conn.execute("""INSERT INTO scenario_run(id,scenario_id,model_version,inputs,outputs,event_id,mode)
             VALUES (%s,%s,%s,%s,%s,%s,%s)""",
             (run_id, scenario_id, MODEL_VERSION, Jsonb(inputs), Jsonb(outputs), event["id"], p["mode"]))
+
+        # 2. Evaluate multi-level materiality rules (delta and target breach) if there is a previous run to compare
         if previous:
-            delta = Decimal(outputs[-1]["debt_pct_gdp"]) - Decimal(previous["outputs"][-1]["debt_pct_gdp"])
-            # Explicit pilot threshold, subject to methodological validation.
-            if abs(delta) >= Decimal("0.5"):
-                evidence = dict(delta_pp=str(delta), threshold_pp="0.5", rule="pilot-materiality-v1",
-                    event_id=str(event["id"]), classification="hypothetical", publication_allowed=False)
-                conn.execute("""INSERT INTO alert(id,scenario_run_id,severity,owner_role,sla_hours,evidence)
-                    VALUES (%s,%s,'material','Independent Reviewer',48,%s) ON CONFLICT DO NOTHING""",
-                    (fingerprint(dict(run_id=run_id, rule="pilot-materiality-v1")), run_id, Jsonb(evidence)))
+            is_material, evidence = evaluate_materiality(
+                current_outputs=outputs,
+                previous_outputs=previous["outputs"],
+                scenario_id=scenario_id,
+                threshold=Decimal("0.50"),
+                target_cap=Decimal("80.00")
+            )
+            evidence["event_id"] = str(event["id"])
+
+            if is_material:
+                alert_id = fingerprint(dict(run_id=run_id, rule=evidence["rule"]))
+                conn.execute("""INSERT INTO alert(id, scenario_run_id, severity, owner_role, sla_hours, status, review_status, evidence)
+                    VALUES (%s, %s, 'material', 'Independent Reviewer', 48, 'new', 'pending_human_review', %s)
+                    ON CONFLICT (id) DO UPDATE SET evidence=EXCLUDED.evidence""",
+                    (alert_id, run_id, Jsonb(evidence)))
+
+                # Emit MaterialReviewRequired event to outbox (recorded as processed domain event)
+                conn.execute("""INSERT INTO outbox (id, event_type, payload, status, processed_at)
+                    VALUES (%s, 'MaterialReviewRequired', %s, 'processed', clock_timestamp())""",
+                    (uuid.uuid4(), Jsonb({"alert_id": alert_id, "scenario_run_id": run_id, "evidence": evidence, "mode": p["mode"]})))
+
+            # Emit ScenarioRecalculated event to outbox (recorded as processed domain event)
+            conn.execute("""INSERT INTO outbox (id, event_type, payload, status, processed_at)
+                VALUES (%s, 'ScenarioRecalculated', %s, 'processed', clock_timestamp())""",
+                (uuid.uuid4(), Jsonb({"scenario_run_id": run_id, "scenario_id": scenario_id, "mode": p["mode"], "is_material": is_material})))
 
 
 def drain(dsn, limit=1000):
