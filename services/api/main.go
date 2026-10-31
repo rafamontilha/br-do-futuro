@@ -681,8 +681,8 @@ func (a *API) handle(w http.ResponseWriter, r *http.Request) {
 		sql = `SELECT COALESCE(jsonb_agg(to_jsonb(t)), '[]') FROM (
    SELECT a.id, a.scenario_run_id, a.severity, a.owner_role, a.sla_hours, a.status,
           a.review_status, a.evidence, a.reviewed_by, a.review_justification, a.reviewed_at, a.created_at
-   FROM alert a JOIN scenario_run s ON a.scenario_run_id=s.id
-   WHERE s.mode=$1 AND a.created_at <= $2
+   FROM alert a LEFT JOIN scenario_run s ON a.scenario_run_id=s.id
+   WHERE (s.mode=$1 OR (s.id IS NULL AND a.evidence->>'mode' = $1)) AND a.created_at <= $2
      AND ($3 = '' OR a.review_status = $3)
      AND ($4 = '' OR a.severity = $4)
    ORDER BY a.created_at DESC) t`

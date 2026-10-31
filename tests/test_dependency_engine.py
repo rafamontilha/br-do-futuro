@@ -130,3 +130,62 @@ def test_worker_triggers_selective_recalculation_and_human_review_alert(db):
         assert first_alert[3] == 48
         assert first_alert[4] == "pending_human_review"
         assert "delta_pp" in first_alert[5]
+
+
+def test_initial_run_evaluates_target_breach_without_previous_run(db):
+    fixture_high_debt = b'[{"data":"01/01/2024","valor":"82.0"}]'
+    ingest(db, "br.debt.gross_pct_gdp", fixture_high_debt, "fixture:high-debt-initial")
+    drain(db)
+
+    with psycopg.connect(db) as conn:
+        alerts = conn.execute("""
+            SELECT id, severity, review_status, evidence
+            FROM alert
+            WHERE review_status='pending_human_review'
+        """).fetchall()
+        assert len(alerts) >= 1
+        found_target_breach = any(a[3].get("target_breach") is True for a in alerts)
+        assert found_target_breach is True
+
+
+def test_ipca_cmn_guidance_target_materiality(db):
+    # Ingest IPCA 12m at 5.20% (breaching CMN ceiling of 4.50%)
+    fixture_ipca_breach = b'[{"data":"01/01/2024","valor":"5.20"}]'
+    ingest(db, "br.ipca.12m", fixture_ipca_breach, "fixture:ipca-high")
+    drain(db)
+
+    with psycopg.connect(db) as conn:
+        alerts = conn.execute("""
+            SELECT id, scenario_run_id, severity, review_status, evidence
+            FROM alert
+            WHERE evidence->>'target_node_id' = 'guidance_target:inflation_target_cmn'
+        """).fetchall()
+        assert len(alerts) == 1
+        al = alerts[0]
+        assert al[1] is None  # scenario_run_id is nullable for guidance targets
+        assert al[2] == "material"
+        assert al[3] == "pending_human_review"
+        assert al[4]["target_breach"] is True
+        assert al[4]["current_value"] == "5.20"
+
+
+def test_selic_and_gdp_ingestion_do_not_corrupt_fiscal_scenarios(db):
+    # Ingest baseline debt
+    fixture_debt = b'[{"data":"01/01/2024","valor":"75.0"}]'
+    ingest(db, "br.debt.gross_pct_gdp", fixture_debt, "fixture:debt-base")
+    drain(db)
+
+    # Ingest Selic (14.50%) and GDP (-1.50%)
+    fixture_selic = b'[{"data":"01/01/2024","valor":"14.50"}]'
+    fixture_gdp = b'[{"data":"01/01/2024","valor":"-1.50"}]'
+    ingest(db, "br.selic.target_annual", fixture_selic, "fixture:selic-test")
+    ingest(db, "br.gdp.quarterly_yoy", fixture_gdp, "fixture:gdp-test")
+    res = drain(db)
+    assert res["failed"] == 0
+
+    with psycopg.connect(db) as conn:
+        runs = conn.execute("SELECT inputs->>'debt_pct_gdp' FROM scenario_run").fetchall()
+        assert len(runs) > 0
+        # All scenario runs must use debt_pct_gdp 75.0, never 14.50 or -1.50
+        for r in runs:
+            assert r[0] == "75.0"

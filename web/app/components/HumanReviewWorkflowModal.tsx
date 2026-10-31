@@ -4,7 +4,7 @@ import React, { useState } from "react";
 
 export interface AlertItem {
   id: string;
-  scenario_run_id: string;
+  scenario_run_id?: string | null;
   severity: string;
   owner_role: string;
   sla_hours: number;
@@ -17,6 +17,12 @@ export interface AlertItem {
     target_breach?: boolean;
     current_debt_pct?: string;
     scenario_id?: string;
+    indicator_id?: string;
+    target_node_id?: string;
+    current_value?: string;
+    previous_value?: string | null;
+    target_cap?: string;
+    target_range?: [string, string];
   };
   reviewed_by?: string;
   review_justification?: string;
@@ -225,7 +231,11 @@ export function HumanReviewWorkflowModal({
                 fontWeight: 600,
               }}
             >
-              ⚠️ Violação de Meta Institucional: Nova trajetória ultrapassa a banda de tolerância oficial (80% PIB).
+              {alert.evidence?.target_range ? (
+                `⚠️ Rompimento de Banda de Meta: Valor apurado (${alert.evidence.current_value}%) fora do intervalo institucional [${alert.evidence.target_range[0]}%, ${alert.evidence.target_range[1]}%].`
+              ) : (
+                `⚠️ Alerta de Limiar Experimental: Nova trajetória ultrapassa o teto ilustrativo de calibração (${alert.evidence?.target_cap ?? "80.00"}% PIB — hipótese experimental pendente de ratificação oficial).`
+              )}
             </div>
           )}
         </div>

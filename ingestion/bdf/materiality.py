@@ -8,7 +8,8 @@ def evaluate_materiality(
     previous_outputs: Optional[list],
     scenario_id: str,
     threshold: Decimal = Decimal("0.50"),
-    target_cap: Optional[Decimal] = Decimal("80.00")
+    target_cap: Optional[Decimal] = Decimal("80.00"),
+    base_debt: Optional[Decimal] = None
 ) -> Tuple[bool, Dict[str, Any]]:
     """
     Evaluates whether a model recalculation produces a material impact.
@@ -20,7 +21,7 @@ def evaluate_materiality(
         return False, {"reason": "no_current_outputs"}
 
     curr_val = Decimal(str(current_outputs[-1]["debt_pct_gdp"]))
-    
+
     delta_pp: Optional[Decimal] = None
     delta_material = False
     if previous_outputs and len(previous_outputs) > 0:
@@ -31,9 +32,14 @@ def evaluate_materiality(
 
     # Target breach check
     target_breach = False
-    if target_cap is not None and curr_val > target_cap:
-        # If debt exceeds cap or deteriorates further
-        target_breach = True
+    if target_cap is not None:
+        if previous_outputs is None:
+            check_val = base_debt if base_debt is not None else curr_val
+            if check_val > target_cap:
+                target_breach = True
+        else:
+            if curr_val > target_cap:
+                target_breach = True
 
     is_material = delta_material or target_breach
 

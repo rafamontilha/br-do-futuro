@@ -32,6 +32,7 @@ CREATE INDEX IF NOT EXISTS dependency_graph_edges_target ON dependency_graph_edg
 ALTER TABLE alert ADD COLUMN IF NOT EXISTS reviewed_by text;
 ALTER TABLE alert ADD COLUMN IF NOT EXISTS review_justification text;
 ALTER TABLE alert ADD COLUMN IF NOT EXISTS reviewed_at timestamptz;
+ALTER TABLE alert ALTER COLUMN scenario_run_id DROP NOT NULL;
 
 -- 4. Planos de Recálculo Seletivo gerados pelo motor
 CREATE TABLE IF NOT EXISTS recalculation_plan (
@@ -86,10 +87,6 @@ VALUES
     ('edge:fiscal_model->adverse', 'model:fiscal_path_v1', 'scenario:adverse', 'accounting_identity', 'delta_absolute', 0.500000),
     ('edge:debt->dynamic_sim', 'indicator:br.debt.gross_pct_gdp', 'scenario:dynamic_simulations', 'direct_input', 'delta_absolute', 0.500000),
 
-    -- Selic e PIB influenciam o modelo fiscal por elasticidade e identidade
-    ('edge:selic->fiscal_model', 'indicator:br.selic.target_annual', 'model:fiscal_path_v1', 'behavioral_elasticity', 'delta_absolute', 0.250000),
-    ('edge:gdp->fiscal_model', 'indicator:br.gdp.quarterly_yoy', 'model:fiscal_path_v1', 'direct_input', 'delta_absolute', 0.500000),
-
     -- Cenário de continuidade é confrontado com a meta de estabilização da dívida
     ('edge:continuity->debt_target', 'scenario:continuity', 'guidance_target:debt_stabilization', 'target_benchmark', 'target_breach', 0.500000),
 
@@ -101,12 +98,16 @@ ON CONFLICT (source_node_id, target_node_id) DO UPDATE SET
     materiality_rule = EXCLUDED.materiality_rule,
     threshold_value = EXCLUDED.threshold_value;
 
+DELETE FROM dependency_graph_edges
+WHERE source_node_id IN ('indicator:br.selic.target_annual', 'indicator:br.gdp.quarterly_yoy')
+  AND target_node_id = 'model:fiscal_path_v1';
+
 -- 7. Permissões de Leitura e Escrita Controlada
 DO $$ BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='bdf_reader') THEN
         GRANT SELECT ON dependency_graph_nodes TO bdf_reader;
         GRANT SELECT ON dependency_graph_edges TO bdf_reader;
         GRANT SELECT, INSERT ON recalculation_plan TO bdf_reader;
-        GRANT SELECT, UPDATE (review_status, reviewed_by, review_justification, reviewed_at) ON alert TO bdf_reader;
+        GRANT SELECT, UPDATE (status, review_status, reviewed_by, review_justification, reviewed_at) ON alert TO bdf_reader;
     END IF;
 END $$;

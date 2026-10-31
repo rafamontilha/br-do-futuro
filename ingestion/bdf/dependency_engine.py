@@ -35,8 +35,6 @@ CANONICAL_EDGES: List[Dict[str, Any]] = [
     {"source_node_id": "model:fiscal_path_v1", "target_node_id": "scenario:alternative", "relationship_type": "accounting_identity", "materiality_rule": "delta_absolute", "threshold_value": Decimal("0.50")},
     {"source_node_id": "model:fiscal_path_v1", "target_node_id": "scenario:adverse", "relationship_type": "accounting_identity", "materiality_rule": "delta_absolute", "threshold_value": Decimal("0.50")},
     {"source_node_id": "indicator:br.debt.gross_pct_gdp", "target_node_id": "scenario:dynamic_simulations", "relationship_type": "direct_input", "materiality_rule": "delta_absolute", "threshold_value": Decimal("0.50")},
-    {"source_node_id": "indicator:br.selic.target_annual", "target_node_id": "model:fiscal_path_v1", "relationship_type": "behavioral_elasticity", "materiality_rule": "delta_absolute", "threshold_value": Decimal("0.25")},
-    {"source_node_id": "indicator:br.gdp.quarterly_yoy", "target_node_id": "model:fiscal_path_v1", "relationship_type": "direct_input", "materiality_rule": "delta_absolute", "threshold_value": Decimal("0.50")},
     {"source_node_id": "scenario:continuity", "target_node_id": "guidance_target:debt_stabilization", "relationship_type": "target_benchmark", "materiality_rule": "target_breach", "threshold_value": Decimal("0.50")},
     {"source_node_id": "indicator:br.ipca.12m", "target_node_id": "guidance_target:inflation_target_cmn", "relationship_type": "target_benchmark", "materiality_rule": "composite", "threshold_value": Decimal("0.25")},
     {"source_node_id": "indicator:br.selic.target_annual", "target_node_id": "guidance_target:selic_neutral_band", "relationship_type": "target_benchmark", "materiality_rule": "delta_absolute", "threshold_value": Decimal("0.25")}
