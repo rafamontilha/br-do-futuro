@@ -19,8 +19,8 @@
 
 ## 1 — Assisted Economic Decisioning (2027)
 
-- Expandir integrações para PIB, inflação, juros, câmbio, fiscal, mercado de trabalho, investimento, crédito e comércio exterior.
-- Painéis de realizado vs. baseline, forecast, target e cenário de continuidade.
+- Expandir integrações para PIB, inflação, juros, câmbio, fiscal, mercado de trabalho, investimento, crédito e comércio exterior. [Núcleo P0 integrado e catalogado]
+- Painéis de realizado vs. baseline, forecast, target e cenário de continuidade. [Entregue na PR #7 — branch phase-1-comparison-panels]
 - Motor de dependências e recálculo seletivo; workflow de revisão humana para impactos materiais.
 - Backtesting de forecasts por vintage e horizonte; mecanismo de alertas por calendário e materialidade.
 - Revisões trimestrais de cenário; primeira revisão anual do Guidance.
