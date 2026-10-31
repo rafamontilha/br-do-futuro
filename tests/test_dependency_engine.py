@@ -1,5 +1,6 @@
 from decimal import Decimal
 import psycopg
+from psycopg.rows import dict_row
 import pytest
 
 from bdf.dependency_engine import load_graph, get_downstream_nodes, resolve_recalculation_plan
@@ -27,6 +28,24 @@ def test_dependency_graph_loading_and_topological_resolution(db):
         model_idx = target_ids.index("model:fiscal_path_v1")
         continuity_idx = target_ids.index("scenario:continuity")
         assert model_idx < continuity_idx
+
+
+def test_load_graph_with_dict_row_factory(db):
+    with psycopg.connect(db, row_factory=dict_row) as conn:
+        conn.execute("""
+            INSERT INTO dependency_graph_nodes (id, node_type, canonical_name, domain_id, description)
+            VALUES ('indicator:custom.test.indicator', 'indicator', 'Custom Test Indicator', 1, 'Custom test description')
+            ON CONFLICT (id) DO NOTHING
+        """)
+        conn.execute("""
+            INSERT INTO dependency_graph_edges (id, source_node_id, target_node_id, relationship_type, materiality_rule, threshold_value)
+            VALUES ('edge:custom_to_model', 'indicator:custom.test.indicator', 'model:fiscal_path_v1', 'direct_input', 'delta_absolute', 0.10)
+            ON CONFLICT (source_node_id, target_node_id) DO NOTHING
+        """)
+        nodes, adj = load_graph(conn)
+        assert "indicator:custom.test.indicator" in nodes
+        assert nodes["indicator:custom.test.indicator"]["canonical_name"] == "Custom Test Indicator"
+        assert any(e["source_node_id"] == "indicator:custom.test.indicator" for e in adj.get("indicator:custom.test.indicator", []))
 
 
 def test_resolve_recalculation_plan_persists_in_db(db):

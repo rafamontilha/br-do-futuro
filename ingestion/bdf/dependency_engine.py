@@ -4,6 +4,7 @@ from collections import deque
 from decimal import Decimal
 from typing import Any, Dict, List, Set, Tuple
 
+from psycopg.rows import tuple_row
 from psycopg.types.json import Jsonb
 
 from .scenario import fingerprint
@@ -48,25 +49,36 @@ def load_graph(conn) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, List[Dict[str
     adj: Dict[str, List[Dict[str, Any]]] = {}
 
     try:
-        cur_nodes = conn.execute("SELECT id, node_type, canonical_name, domain_id, description FROM dependency_graph_nodes").fetchall()
-        for r in cur_nodes:
-            nodes[r[0]] = {
-                "id": r[0],
-                "node_type": r[1],
-                "canonical_name": r[2],
-                "domain_id": r[3],
-                "description": r[4]
-            }
-        
-        cur_edges = conn.execute("SELECT source_node_id, target_node_id, relationship_type, materiality_rule, threshold_value FROM dependency_graph_edges").fetchall()
-        for e in cur_edges:
-            adj.setdefault(e[0], []).append({
-                "source_node_id": e[0],
-                "target_node_id": e[1],
-                "relationship_type": e[2],
-                "materiality_rule": e[3],
-                "threshold_value": Decimal(str(e[4]))
-            })
+        with conn.cursor(row_factory=tuple_row) as cur:
+            cur_nodes = cur.execute("SELECT id, node_type, canonical_name, domain_id, description FROM dependency_graph_nodes").fetchall()
+            for r in cur_nodes:
+                nid = r["id"] if isinstance(r, dict) else r[0]
+                ntype = r["node_type"] if isinstance(r, dict) else r[1]
+                ncname = r["canonical_name"] if isinstance(r, dict) else r[2]
+                ndomain = r["domain_id"] if isinstance(r, dict) else r[3]
+                ndesc = r["description"] if isinstance(r, dict) else r[4]
+                nodes[nid] = {
+                    "id": nid,
+                    "node_type": ntype,
+                    "canonical_name": ncname,
+                    "domain_id": ndomain,
+                    "description": ndesc
+                }
+
+            cur_edges = cur.execute("SELECT source_node_id, target_node_id, relationship_type, materiality_rule, threshold_value FROM dependency_graph_edges").fetchall()
+            for e in cur_edges:
+                src = e["source_node_id"] if isinstance(e, dict) else e[0]
+                tgt = e["target_node_id"] if isinstance(e, dict) else e[1]
+                rel = e["relationship_type"] if isinstance(e, dict) else e[2]
+                mat = e["materiality_rule"] if isinstance(e, dict) else e[3]
+                val = e["threshold_value"] if isinstance(e, dict) else e[4]
+                adj.setdefault(src, []).append({
+                    "source_node_id": src,
+                    "target_node_id": tgt,
+                    "relationship_type": rel,
+                    "materiality_rule": mat,
+                    "threshold_value": Decimal(str(val))
+                })
     except Exception as exc:
         logger.warning("Could not read dependency graph from database; using canonical fallback: %s", exc)
 
