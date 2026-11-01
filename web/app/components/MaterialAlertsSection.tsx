@@ -164,10 +164,12 @@ export function MaterialAlertsSection({
       {/* Modais Interativos */}
       <DependencyGraphVisualizer
         isOpen={isDAGModalOpen}
+        mode={mode}
         onClose={() => setIsDAGModalOpen(false)}
       />
 
       <HumanReviewWorkflowModal
+        key={selectedAlert?.id ?? "none"}
         alert={selectedAlert}
         isOpen={isReviewModalOpen}
         onClose={() => {

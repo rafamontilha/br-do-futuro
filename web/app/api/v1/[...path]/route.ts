@@ -18,6 +18,8 @@ export async function GET(
   if (apiKey) headers.set("x-api-key", apiKey);
   const role = request.headers.get("x-actor-role");
   if (role) headers.set("x-actor-role", role);
+  const actorId = request.headers.get("x-actor-id");
+  if (actorId) headers.set("x-actor-id", actorId);
 
   try {
     const res = await fetch(targetUrl, {
@@ -52,6 +54,8 @@ export async function POST(
   if (apiKey) headers.set("x-api-key", apiKey);
   const role = request.headers.get("x-actor-role");
   if (role) headers.set("x-actor-role", role);
+  const actorId = request.headers.get("x-actor-id");
+  if (actorId) headers.set("x-actor-id", actorId);
 
   const bodyText = await request.text();
 

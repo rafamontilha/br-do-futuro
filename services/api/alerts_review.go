@@ -3,11 +3,14 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type AlertReviewRequestBody struct {
@@ -73,7 +76,12 @@ func (a *API) handleAlertReview(w http.ResponseWriter, r *http.Request, ctx cont
 		SELECT review_status, severity, evidence FROM alert WHERE id = $1 FOR UPDATE
 	`, alertID).Scan(&currentReviewStatus, &severity, &evidenceJSON)
 	if err != nil {
-		write(w, http.StatusNotFound, map[string]string{"error": "alert not found"})
+		if errors.Is(err, pgx.ErrNoRows) {
+			write(w, http.StatusNotFound, map[string]string{"error": "alert not found"})
+			return
+		}
+		slog.Error("query_alert_for_review_failed", "error", err)
+		write(w, http.StatusInternalServerError, map[string]string{"error": "could not load alert for review"})
 		return
 	}
 
@@ -117,7 +125,13 @@ func (a *API) handleAlertReview(w http.ResponseWriter, r *http.Request, ctx cont
 		LIMIT 1
 	`).Scan(&prevHash)
 	if err != nil {
-		prevHash = "0000000000000000000000000000000000000000000000000000000000000000"
+		if errors.Is(err, pgx.ErrNoRows) {
+			prevHash = "0000000000000000000000000000000000000000000000000000000000000000"
+		} else {
+			slog.Error("query_prev_audit_hash_failed", "error", err)
+			write(w, http.StatusInternalServerError, map[string]string{"error": "could not read previous audit hash"})
+			return
+		}
 	}
 
 	auditID := fmt.Sprintf("audit-rev-%s-%s", now.Format("20060102"), newUUID()[:8])

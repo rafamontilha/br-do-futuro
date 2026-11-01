@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 export interface AlertItem {
   id: string;
@@ -19,6 +19,7 @@ export interface AlertItem {
     scenario_id?: string;
     indicator_id?: string;
     target_node_id?: string;
+    reference_period?: string;
     current_value?: string;
     previous_value?: string | null;
     target_cap?: string;
@@ -48,6 +49,24 @@ export function HumanReviewWorkflowModal({
   const [apiKey, setApiKey] = useState("bdf-reviewer-token-2026");
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string; details?: any } | null>(null);
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+    setAction("approve");
+    setJustification("");
+    setSubmitting(false);
+    setFeedback(null);
+    return () => {
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current);
+        closeTimeoutRef.current = null;
+      }
+    };
+  }, [alert?.id, isOpen]);
 
   if (!isOpen || !alert) return null;
 
@@ -89,7 +108,7 @@ export function HumanReviewWorkflowModal({
           message: `Alerta ${action === "approve" ? "aprovado" : "rejeitado"} com sucesso e registrado na trilha imutável de auditoria.`,
           details: data.data,
         });
-        setTimeout(() => {
+        closeTimeoutRef.current = setTimeout(() => {
           onSuccess();
           onClose();
         }, 2000);

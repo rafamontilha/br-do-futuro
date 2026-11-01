@@ -490,42 +490,60 @@ func TestTrajectoriesEndpoints(t *testing.T) {
 
 func TestDependenciesEndpoint(t *testing.T) {
 	a := &API{catalog: []byte(`{"domains":[],"indicators":[]}`), rateLimiter: NewRateLimiter()}
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest("GET", "/v1/dependencies", nil)
-	a.handle(w, r)
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
-	}
 
-	var resp struct {
-		Meta map[string]any `json:"meta"`
-		Data struct {
-			Nodes []DependencyNode `json:"nodes"`
-			Edges []DependencyEdge `json:"edges"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
-		t.Fatalf("failed to decode response: %v", err)
-	}
-
-	if len(resp.Data.Nodes) == 0 {
-		t.Fatal("expected at least 1 node in dependency graph")
-	}
-	if len(resp.Data.Edges) == 0 {
-		t.Fatal("expected at least 1 edge in dependency graph")
-	}
-
-	// Verify debt node and edge presence
-	foundDebtNode := false
-	for _, n := range resp.Data.Nodes {
-		if n.ID == "indicator:br.debt.gross_pct_gdp" {
-			foundDebtNode = true
-			break
+	t.Run("mode fixture returns canonical dependency graph without removed edges", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", "/v1/dependencies?mode=fixture", nil)
+		a.handle(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d", w.Code)
 		}
-	}
-	if !foundDebtNode {
-		t.Errorf("expected indicator:br.debt.gross_pct_gdp in nodes")
-	}
+
+		var resp struct {
+			Meta map[string]any `json:"meta"`
+			Data struct {
+				Nodes []DependencyNode `json:"nodes"`
+				Edges []DependencyEdge `json:"edges"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if len(resp.Data.Nodes) != 14 {
+			t.Fatalf("expected 14 nodes in dependency graph, got %d", len(resp.Data.Nodes))
+		}
+		if len(resp.Data.Edges) != 8 {
+			t.Fatalf("expected 8 edges in dependency graph, got %d", len(resp.Data.Edges))
+		}
+
+		foundDebtNode := false
+		for _, n := range resp.Data.Nodes {
+			if n.ID == "indicator:br.debt.gross_pct_gdp" {
+				foundDebtNode = true
+				break
+			}
+		}
+		if !foundDebtNode {
+			t.Errorf("expected indicator:br.debt.gross_pct_gdp in nodes")
+		}
+
+		for _, e := range resp.Data.Edges {
+			if (e.SourceNodeID == "indicator:br.selic.target_annual" || e.SourceNodeID == "indicator:br.gdp.quarterly_yoy") &&
+				e.TargetNodeID == "model:fiscal_path_v1" {
+				t.Errorf("unexpected removed edge %s -> %s in fallbackCanonicalGraph", e.SourceNodeID, e.TargetNodeID)
+			}
+		}
+	})
+
+	t.Run("mode source without db returns 503 and never falls back to static graph", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", "/v1/dependencies?mode=source", nil)
+		a.handle(w, r)
+		if w.Code != http.StatusServiceUnavailable {
+			t.Fatalf("expected 503 for mode=source without db, got %d", w.Code)
+		}
+	})
 }
 
 func TestAlertReviewValidation(t *testing.T) {

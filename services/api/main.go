@@ -642,7 +642,7 @@ func (a *API) handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.URL.Path == "/v1/dependencies" {
-		a.handleGetDependencies(w, r, ctx, meta)
+		a.handleGetDependencies(w, r, ctx, meta, mode)
 		return
 	}
 

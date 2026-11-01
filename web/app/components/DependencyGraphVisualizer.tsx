@@ -21,6 +21,7 @@ export interface DependencyEdge {
 
 interface DependencyGraphVisualizerProps {
   isOpen: boolean;
+  mode?: string;
   onClose: () => void;
 }
 
@@ -44,26 +45,38 @@ const nodeTypeColors: Record<string, { bg: string; text: string; border: string 
   guidance_target: { bg: "#def0e5", text: "#1a5e3a", border: "#86efac" },
 };
 
-export function DependencyGraphVisualizer({ isOpen, onClose }: DependencyGraphVisualizerProps) {
+export function DependencyGraphVisualizer({
+  isOpen,
+  mode = "fixture",
+  onClose,
+}: DependencyGraphVisualizerProps) {
   const [nodes, setNodes] = useState<DependencyNode[]>([]);
   const [edges, setEdges] = useState<DependencyEdge[]>([]);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
     setLoading(true);
-    fetch("/api/v1/dependencies")
-      .then((res) => res.json())
-      .then((payload) => {
+    setError(null);
+    fetch(`/api/v1/dependencies?mode=${encodeURIComponent(mode)}`)
+      .then(async (res) => {
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(payload?.error || `Falha ao carregar grafo (HTTP ${res.status})`);
+        }
         if (payload?.data) {
           setNodes(payload.data.nodes || []);
           setEdges(payload.data.edges || []);
         }
       })
-      .catch((err) => console.error("Failed to load dependencies:", err))
+      .catch((err) => {
+        console.error("Failed to load dependencies:", err);
+        setError(err?.message || "Erro ao carregar grafo de dependências.");
+      })
       .finally(() => setLoading(false));
-  }, [isOpen]);
+  }, [isOpen, mode]);
 
   if (!isOpen) return null;
 
@@ -179,6 +192,21 @@ export function DependencyGraphVisualizer({ isOpen, onClose }: DependencyGraphVi
           <p style={{ textAlign: "center", padding: "40px", color: "#52675d" }}>
             Carregando estrutura formal do DAG...
           </p>
+        ) : error ? (
+          <div
+            role="alert"
+            style={{
+              background: "#fef2f2",
+              border: "1px solid #fecaca",
+              color: "#991b1b",
+              borderRadius: "6px",
+              padding: "16px",
+              fontSize: "13px",
+              textAlign: "center",
+            }}
+          >
+            {error}
+          </div>
         ) : (
           <>
             <div
@@ -268,6 +296,7 @@ export function DependencyGraphVisualizer({ isOpen, onClose }: DependencyGraphVi
                   {targets.map((n) => {
                     const isSelected = selectedNode === n.id;
                     const colors = nodeTypeColors[n.node_type] || { bg: "#f3f4f6", text: "#111827", border: "#d1d5db" };
+                    const isOfficialTarget = n.id === "guidance_target:inflation_target_cmn";
                     return (
                       <div
                         key={n.id}
@@ -284,7 +313,7 @@ export function DependencyGraphVisualizer({ isOpen, onClose }: DependencyGraphVi
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                           <strong style={{ fontSize: "12.5px", color: colors.text }}>{n.canonical_name}</strong>
                           <span style={{ fontSize: "10.5px", background: "#ffffff", padding: "1px 6px", borderRadius: "4px", color: "#64748b" }}>
-                            Meta Oficial
+                            {isOfficialTarget ? "Meta Oficial (CMN)" : "Hipótese Experimental"}
                           </span>
                         </div>
                         <p style={{ fontSize: "11.5px", color: "#475569", margin: "4px 0 0 0" }}>{n.description}</p>

@@ -189,3 +189,46 @@ def test_selic_and_gdp_ingestion_do_not_corrupt_fiscal_scenarios(db):
         # All scenario runs must use debt_pct_gdp 75.0, never 14.50 or -1.50
         for r in runs:
             assert r[0] == "75.0"
+
+
+def test_historical_ipca_revision_compares_same_reference_period(db):
+    # Initial ingestion with Jan=3.00% and Jun=4.00% (both within [1.50, 4.50], delta immaterial)
+    fixture_initial = b'[{"data":"01/01/2024","valor":"3.00"},{"data":"01/06/2024","valor":"4.00"}]'
+    ingest(db, "br.ipca.12m", fixture_initial, "fixture:ipca-initial-series")
+    drain(db)
+
+    # Clear initial alert (if any from +1.00 delta between Jan and Jun on initial batch)
+    with psycopg.connect(db) as conn:
+        conn.execute("DELETE FROM alert WHERE evidence->>'indicator_id' = 'br.ipca.12m'")
+
+    # Now ingest a revision ONLY to Jan (from 3.00% to 3.10%, +0.10 p.p. < 0.25 p.p. threshold)
+    fixture_jan_minor_rev = b'[{"data":"01/01/2024","valor":"3.10"}]'
+    ingest(db, "br.ipca.12m", fixture_jan_minor_rev, "fixture:ipca-jan-minor-rev")
+    drain(db)
+
+    with psycopg.connect(db) as conn:
+        alerts = conn.execute("""
+            SELECT id, evidence FROM alert
+            WHERE evidence->>'indicator_id' = 'br.ipca.12m'
+        """).fetchall()
+        # Must NOT compare Jan (3.10) against Jun (4.00) and must NOT fire a false alert
+        assert len(alerts) == 0
+
+    # Now ingest a material revision to Jan (from 3.10% to 3.50%, +0.40 p.p. >= 0.25 p.p. threshold)
+    fixture_jan_material_rev = b'[{"data":"01/01/2024","valor":"3.50"}]'
+    ingest(db, "br.ipca.12m", fixture_jan_material_rev, "fixture:ipca-jan-material-rev")
+    drain(db)
+
+    with psycopg.connect(db) as conn:
+        alerts = conn.execute("""
+            SELECT id, evidence FROM alert
+            WHERE evidence->>'indicator_id' = 'br.ipca.12m'
+        """).fetchall()
+        assert len(alerts) == 1
+        ev = alerts[0][1]
+        assert ev["reference_period"] == "2024-01-01"
+        assert ev["current_value"] == "3.50"
+        assert ev["previous_value"] == "3.10"
+        assert ev["delta_pp"] == "0.40"
+        assert ev["target_breach"] is False
+        assert ev["rule"] == "delta_absolute"

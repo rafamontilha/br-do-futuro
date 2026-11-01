@@ -69,9 +69,9 @@ VALUES
     ('scenario:dynamic_simulations', 'scenario', 'Simulações Dinâmicas', 5, 'Mecanismo de simulação de premissas interativas do usuário'),
 
     -- Metas Oficiais e Compromissos do Guidance
-    ('guidance_target:debt_stabilization', 'guidance_target', 'Estabilização da Dívida', 5, 'Compromisso institucional de estabilização da Dívida/PIB até 2030'),
-    ('guidance_target:inflation_target_cmn', 'guidance_target', 'Meta Contínua de Inflação', 2, 'Meta oficial do CMN de 3,00% a.a. com intervalo de tolerância de +/- 1,5 p.p.'),
-    ('guidance_target:selic_neutral_band', 'guidance_target', 'Banda Neutra de Juros', 3, 'Faixa referencial de equilíbrio neutro de taxa de juros real')
+    ('guidance_target:debt_stabilization', 'guidance_target', 'Estabilização da Dívida (Hipótese)', 5, 'Hipótese experimental de estabilização da Dívida/PIB em 80% até 2030 (sujeita a revisão humana)'),
+    ('guidance_target:inflation_target_cmn', 'guidance_target', 'Meta Contínua de Inflação (CMN)', 2, 'Meta oficial do CMN de 3,00% a.a. com intervalo de tolerância de +/- 1,5 p.p.'),
+    ('guidance_target:selic_neutral_band', 'guidance_target', 'Banda Neutra de Juros (Ilustrativa)', 3, 'Faixa referencial ilustrativa de equilíbrio neutro de taxa de juros (8,50% a 10,50% a.a.)')
 ON CONFLICT (id) DO UPDATE SET
     canonical_name = EXCLUDED.canonical_name,
     domain_id = EXCLUDED.domain_id,

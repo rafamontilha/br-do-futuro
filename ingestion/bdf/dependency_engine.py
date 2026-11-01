@@ -1,5 +1,6 @@
 """Formal Dependency Graph (DAG) and Selective Recalculation Engine for Brasil do Futuro."""
 import logging
+import uuid
 from collections import deque
 from decimal import Decimal
 from typing import Any, Dict, List, Set, Tuple
@@ -11,7 +12,7 @@ from .scenario import fingerprint
 
 logger = logging.getLogger(__name__)
 
-# Canonical fallback graph definitions in case database tables are being initialized
+# Canonical graph definitions for in-memory unit tests (when conn is None)
 CANONICAL_NODES: List[Dict[str, Any]] = [
     {"id": "indicator:br.debt.gross_pct_gdp", "node_type": "indicator", "canonical_name": "Dívida Bruta (% PIB)", "domain_id": 5, "description": "Dívida Bruta do Governo Geral em proporção do PIB"},
     {"id": "indicator:br.ipca.12m", "node_type": "indicator", "canonical_name": "IPCA 12 Meses", "domain_id": 2, "description": "Inflação oficial acumulada em 12 meses"},
@@ -24,9 +25,9 @@ CANONICAL_NODES: List[Dict[str, Any]] = [
     {"id": "scenario:alternative", "node_type": "scenario", "canonical_name": "Cenário Alternativo", "domain_id": 5, "description": "Trajetória com ajuste fiscal estrutural"},
     {"id": "scenario:adverse", "node_type": "scenario", "canonical_name": "Cenário Adverso", "domain_id": 5, "description": "Trajetória de estresse macroeconômico"},
     {"id": "scenario:dynamic_simulations", "node_type": "scenario", "canonical_name": "Simulações Dinâmicas", "domain_id": 5, "description": "Mecanismo de simulação de premissas interativas"},
-    {"id": "guidance_target:debt_stabilization", "node_type": "guidance_target", "canonical_name": "Estabilização da Dívida", "domain_id": 5, "description": "Meta de estabilização da Dívida/PIB até 2030"},
-    {"id": "guidance_target:inflation_target_cmn", "node_type": "guidance_target", "canonical_name": "Meta Contínua de Inflação", "domain_id": 2, "description": "Meta CMN 3,00% com banda de 1,5 p.p."},
-    {"id": "guidance_target:selic_neutral_band", "node_type": "guidance_target", "canonical_name": "Banda Neutra de Juros", "domain_id": 3, "description": "Faixa referencial neutra de juros reais"}
+    {"id": "guidance_target:debt_stabilization", "node_type": "guidance_target", "canonical_name": "Estabilização da Dívida (Hipótese)", "domain_id": 5, "description": "Hipótese experimental de estabilização da Dívida/PIB em 80% até 2030 (sujeita a revisão humana)"},
+    {"id": "guidance_target:inflation_target_cmn", "node_type": "guidance_target", "canonical_name": "Meta Contínua de Inflação (CMN)", "domain_id": 2, "description": "Meta oficial do CMN de 3,00% a.a. com intervalo de tolerância de +/- 1,5 p.p."},
+    {"id": "guidance_target:selic_neutral_band", "node_type": "guidance_target", "canonical_name": "Banda Neutra de Juros (Ilustrativa)", "domain_id": 3, "description": "Faixa referencial ilustrativa de equilíbrio neutro de taxa de juros (8,50% a 10,50% a.a.)"}
 ]
 
 CANONICAL_EDGES: List[Dict[str, Any]] = [
@@ -42,11 +43,11 @@ CANONICAL_EDGES: List[Dict[str, Any]] = [
 
 
 def load_graph(conn) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, List[Dict[str, Any]]]]:
-    """Loads nodes and adjacency list (edges) from database with fallback to canonical definitions."""
+    """Loads nodes and adjacency list (edges) from database; uses canonical definitions only when conn is None."""
     nodes: Dict[str, Dict[str, Any]] = {}
     adj: Dict[str, List[Dict[str, Any]]] = {}
 
-    try:
+    if conn is not None:
         with conn.cursor(row_factory=tuple_row) as cur:
             cur_nodes = cur.execute("SELECT id, node_type, canonical_name, domain_id, description FROM dependency_graph_nodes").fetchall()
             for r in cur_nodes:
@@ -77,14 +78,12 @@ def load_graph(conn) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, List[Dict[str
                     "materiality_rule": mat,
                     "threshold_value": Decimal(str(val))
                 })
-    except Exception as exc:
-        logger.warning("Could not read dependency graph from database; using canonical fallback: %s", exc)
+        return nodes, adj
 
-    if not nodes:
-        for n in CANONICAL_NODES:
-            nodes[n["id"]] = n
-        for e in CANONICAL_EDGES:
-            adj.setdefault(e["source_node_id"], []).append(e)
+    for n in CANONICAL_NODES:
+        nodes[n["id"]] = n
+    for e in CANONICAL_EDGES:
+        adj.setdefault(e["source_node_id"], []).append(e)
 
     return nodes, adj
 
@@ -141,24 +140,23 @@ def resolve_recalculation_plan(conn, event: Dict[str, Any]) -> Dict[str, Any]:
 
     status = "executed" if affected_nodes else "skipped"
 
-    # Verify if event_id actually exists in outbox to satisfy FK constraint
-    event_id = event.get("id")
-    valid_event_id = None
-    if event_id:
-        try:
-            if conn.execute("SELECT 1 FROM outbox WHERE id=%s", (event_id,)).fetchone():
-                valid_event_id = event_id
-        except Exception:
-            pass
+    if conn is not None:
+        event_id = event.get("id")
+        valid_event_id = None
+        if event_id:
+            try:
+                parsed_uuid = str(uuid.UUID(str(event_id)))
+                with conn.cursor(row_factory=tuple_row) as cur:
+                    if cur.execute("SELECT 1 FROM outbox WHERE id=%s", (parsed_uuid,)).fetchone():
+                        valid_event_id = parsed_uuid
+            except ValueError:
+                valid_event_id = None
 
-    try:
         conn.execute("""
             INSERT INTO recalculation_plan (id, event_id, trigger_indicator_id, affected_nodes, rationale, status)
             VALUES (%s, %s, %s, %s, %s, %s)
             ON CONFLICT (id) DO NOTHING
         """, (plan_id, valid_event_id, indicator_id, Jsonb(affected_nodes), rationale, status))
-    except Exception as exc:
-        logger.error("Failed to persist recalculation plan: %s", exc)
 
     return {
         "id": plan_id,

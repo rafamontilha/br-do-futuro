@@ -122,17 +122,37 @@ def process_event(conn, event):
     for target in affected_targets:
         target_id = target["node_id"]
         curr_obs = conn.execute("""SELECT o.*, v.known_at FROM observation o
-            JOIN vintage v ON v.id=o.vintage_id WHERE indicator_id=%s AND mode=%s
-            AND v.id=%s ORDER BY reference_period DESC LIMIT 1""",
+            JOIN vintage v ON v.id=o.vintage_id WHERE o.indicator_id=%s AND o.mode=%s
+            AND v.id=%s ORDER BY o.reference_period DESC LIMIT 1""",
             (p["indicator_id"], p["mode"], p["vintage_id"])).fetchone()
         if not curr_obs:
             continue
 
+        latest_series_obs = conn.execute("""SELECT o.*, v.known_at FROM observation o
+            JOIN vintage v ON v.id=o.vintage_id WHERE o.indicator_id=%s AND o.mode=%s
+            AND v.known_at <= %s
+            ORDER BY o.reference_period DESC, v.known_at DESC LIMIT 1""",
+            (p["indicator_id"], p["mode"], curr_obs["known_at"])).fetchone()
+        is_latest_period = bool(
+            latest_series_obs
+            and curr_obs["reference_period"] == latest_series_obs["reference_period"]
+        )
+
+        # First check for a prior vintage of the exact same reference_period (historical revision)
         prev_obs = conn.execute("""SELECT o.*, v.known_at FROM observation o
-            JOIN vintage v ON v.id=o.vintage_id WHERE indicator_id=%s AND mode=%s
-            AND v.known_at < (SELECT known_at FROM vintage WHERE id=%s)
-            ORDER BY reference_period DESC, v.known_at DESC LIMIT 1""",
-            (p["indicator_id"], p["mode"], p["vintage_id"])).fetchone()
+            JOIN vintage v ON v.id=o.vintage_id WHERE o.indicator_id=%s AND o.mode=%s
+            AND o.reference_period=%s AND v.known_at < %s
+            ORDER BY v.known_at DESC LIMIT 1""",
+            (p["indicator_id"], p["mode"], curr_obs["reference_period"], curr_obs["known_at"])).fetchone()
+
+        # If this is a newly released latest reference_period (no prior vintage for same period),
+        # compare against the immediately preceding reference_period as-of this vintage.
+        if prev_obs is None and is_latest_period:
+            prev_obs = conn.execute("""SELECT o.*, v.known_at FROM observation o
+                JOIN vintage v ON v.id=o.vintage_id WHERE o.indicator_id=%s AND o.mode=%s
+                AND o.reference_period < %s AND v.known_at <= %s
+                ORDER BY o.reference_period DESC, v.known_at DESC LIMIT 1""",
+                (p["indicator_id"], p["mode"], curr_obs["reference_period"], curr_obs["known_at"])).fetchone()
 
         curr_val = Decimal(str(curr_obs["value"]))
         prev_val = Decimal(str(prev_obs["value"])) if prev_obs else None
@@ -143,10 +163,12 @@ def process_event(conn, event):
         target_bounds = None
         if target_id == "guidance_target:inflation_target_cmn":
             target_bounds = ["1.50", "4.50"]
-            target_breach = curr_val > Decimal("4.50") or curr_val < Decimal("1.50")
+            if is_latest_period:
+                target_breach = curr_val > Decimal("4.50") or curr_val < Decimal("1.50")
         elif target_id == "guidance_target:selic_neutral_band":
             target_bounds = ["8.50", "10.50"]
-            target_breach = curr_val > Decimal("10.50") or curr_val < Decimal("8.50")
+            if is_latest_period:
+                target_breach = curr_val > Decimal("10.50") or curr_val < Decimal("8.50")
 
         delta_material = (delta_pp is not None) and (abs(delta_pp) >= threshold)
         is_target_material = delta_material or target_breach
@@ -161,10 +183,17 @@ def process_event(conn, event):
             rule = "immaterial"
 
         if is_target_material:
-            target_alert_id = fingerprint(dict(indicator=p["indicator_id"], target=target_id, vintage=str(p["vintage_id"]), rule=rule))
+            target_alert_id = fingerprint(dict(
+                indicator=p["indicator_id"],
+                target=target_id,
+                vintage=str(p["vintage_id"]),
+                reference_period=str(curr_obs["reference_period"]),
+                rule=rule,
+            ))
             evidence = {
                 "indicator_id": p["indicator_id"],
                 "target_node_id": target_id,
+                "reference_period": str(curr_obs["reference_period"]),
                 "current_value": str(curr_val),
                 "previous_value": str(prev_val) if prev_val is not None else None,
                 "delta_pp": str(delta_pp) if delta_pp is not None else "0.00",

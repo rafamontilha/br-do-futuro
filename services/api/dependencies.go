@@ -44,9 +44,9 @@ var fallbackCanonicalGraph = DependencyGraphResponse{
 		{ID: "scenario:alternative", NodeType: "scenario", CanonicalName: "Cenário Alternativo", Description: "Trajetória com ajuste fiscal estrutural"},
 		{ID: "scenario:adverse", NodeType: "scenario", CanonicalName: "Cenário Adverso", Description: "Trajetória de estresse macroeconômico"},
 		{ID: "scenario:dynamic_simulations", NodeType: "scenario", CanonicalName: "Simulações Dinâmicas", Description: "Mecanismo de simulação de premissas interativas"},
-		{ID: "guidance_target:debt_stabilization", NodeType: "guidance_target", CanonicalName: "Estabilização da Dívida", Description: "Meta de estabilização da Dívida/PIB até 2030"},
-		{ID: "guidance_target:inflation_target_cmn", NodeType: "guidance_target", CanonicalName: "Meta Contínua de Inflação", Description: "Meta CMN 3,00% com banda de 1,5 p.p."},
-		{ID: "guidance_target:selic_neutral_band", NodeType: "guidance_target", CanonicalName: "Banda Neutra de Juros", Description: "Faixa referencial neutra de juros reais"},
+		{ID: "guidance_target:debt_stabilization", NodeType: "guidance_target", CanonicalName: "Estabilização da Dívida (Hipótese)", Description: "Hipótese experimental de estabilização da Dívida/PIB em 80% até 2030 (sujeita a revisão humana)"},
+		{ID: "guidance_target:inflation_target_cmn", NodeType: "guidance_target", CanonicalName: "Meta Contínua de Inflação (CMN)", Description: "Meta oficial do CMN de 3,00% a.a. com intervalo de tolerância de +/- 1,5 p.p."},
+		{ID: "guidance_target:selic_neutral_band", NodeType: "guidance_target", CanonicalName: "Banda Neutra de Juros (Ilustrativa)", Description: "Faixa referencial ilustrativa de equilíbrio neutro de taxa de juros (8,50% a 10,50% a.a.)"},
 	},
 	Edges: []DependencyEdge{
 		{ID: "edge:debt->fiscal_model", SourceNodeID: "indicator:br.debt.gross_pct_gdp", TargetNodeID: "model:fiscal_path_v1", RelationshipType: "direct_input", MaterialityRule: "delta_absolute", ThresholdValue: 0.50},
@@ -54,16 +54,21 @@ var fallbackCanonicalGraph = DependencyGraphResponse{
 		{ID: "edge:fiscal_model->alternative", SourceNodeID: "model:fiscal_path_v1", TargetNodeID: "scenario:alternative", RelationshipType: "accounting_identity", MaterialityRule: "delta_absolute", ThresholdValue: 0.50},
 		{ID: "edge:fiscal_model->adverse", SourceNodeID: "model:fiscal_path_v1", TargetNodeID: "scenario:adverse", RelationshipType: "accounting_identity", MaterialityRule: "delta_absolute", ThresholdValue: 0.50},
 		{ID: "edge:debt->dynamic_sim", SourceNodeID: "indicator:br.debt.gross_pct_gdp", TargetNodeID: "scenario:dynamic_simulations", RelationshipType: "direct_input", MaterialityRule: "delta_absolute", ThresholdValue: 0.50},
-		{ID: "edge:selic->fiscal_model", SourceNodeID: "indicator:br.selic.target_annual", TargetNodeID: "model:fiscal_path_v1", RelationshipType: "behavioral_elasticity", MaterialityRule: "delta_absolute", ThresholdValue: 0.25},
-		{ID: "edge:gdp->fiscal_model", SourceNodeID: "indicator:br.gdp.quarterly_yoy", TargetNodeID: "model:fiscal_path_v1", RelationshipType: "direct_input", MaterialityRule: "delta_absolute", ThresholdValue: 0.50},
 		{ID: "edge:continuity->debt_target", SourceNodeID: "scenario:continuity", TargetNodeID: "guidance_target:debt_stabilization", RelationshipType: "target_benchmark", MaterialityRule: "target_breach", ThresholdValue: 0.50},
 		{ID: "edge:ipca->cmn_target", SourceNodeID: "indicator:br.ipca.12m", TargetNodeID: "guidance_target:inflation_target_cmn", RelationshipType: "target_benchmark", MaterialityRule: "composite", ThresholdValue: 0.25},
 		{ID: "edge:selic->neutral_band", SourceNodeID: "indicator:br.selic.target_annual", TargetNodeID: "guidance_target:selic_neutral_band", RelationshipType: "target_benchmark", MaterialityRule: "delta_absolute", ThresholdValue: 0.25},
 	},
 }
 
-func (a *API) handleGetDependencies(w http.ResponseWriter, r *http.Request, ctx context.Context, meta map[string]any) {
+func (a *API) handleGetDependencies(w http.ResponseWriter, r *http.Request, ctx context.Context, meta map[string]any, mode string) {
 	if a.db == nil {
+		if mode == "source" {
+			write(w, http.StatusServiceUnavailable, map[string]string{
+				"error": "dependency graph unavailable: database not configured for source mode",
+			})
+			return
+		}
+		meta["freshness"] = "synthetic_fixture"
 		meta["node_count"] = len(fallbackCanonicalGraph.Nodes)
 		meta["edge_count"] = len(fallbackCanonicalGraph.Edges)
 		write(w, http.StatusOK, map[string]any{
@@ -76,13 +81,8 @@ func (a *API) handleGetDependencies(w http.ResponseWriter, r *http.Request, ctx 
 	nodesSQL := `SELECT id, node_type, canonical_name, domain_id, description, created_at FROM dependency_graph_nodes ORDER BY node_type, id`
 	rows, err := a.db.Query(ctx, nodesSQL)
 	if err != nil {
-		slog.Warn("query_dependency_nodes_failed; using fallback", "error", err)
-		meta["node_count"] = len(fallbackCanonicalGraph.Nodes)
-		meta["edge_count"] = len(fallbackCanonicalGraph.Edges)
-		write(w, http.StatusOK, map[string]any{
-			"meta": meta,
-			"data": fallbackCanonicalGraph,
-		})
+		slog.Error("query_dependency_nodes_failed", "error", err)
+		write(w, http.StatusServiceUnavailable, map[string]string{"error": "data temporarily unavailable"})
 		return
 	}
 	defer rows.Close()
@@ -92,21 +92,22 @@ func (a *API) handleGetDependencies(w http.ResponseWriter, r *http.Request, ctx 
 		var n DependencyNode
 		if err := rows.Scan(&n.ID, &n.NodeType, &n.CanonicalName, &n.DomainID, &n.Description, &n.CreatedAt); err != nil {
 			slog.Error("scan_node_failed", "error", err)
-			continue
+			write(w, http.StatusServiceUnavailable, map[string]string{"error": "data temporarily unavailable"})
+			return
 		}
 		nodes = append(nodes, n)
+	}
+	if err := rows.Err(); err != nil {
+		slog.Error("rows_dependency_nodes_failed", "error", err)
+		write(w, http.StatusServiceUnavailable, map[string]string{"error": "data temporarily unavailable"})
+		return
 	}
 
 	edgesSQL := `SELECT id, source_node_id, target_node_id, relationship_type, materiality_rule, threshold_value, created_at FROM dependency_graph_edges ORDER BY source_node_id, target_node_id`
 	erows, err := a.db.Query(ctx, edgesSQL)
 	if err != nil {
-		slog.Warn("query_dependency_edges_failed; using fallback", "error", err)
-		meta["node_count"] = len(nodes)
-		meta["edge_count"] = len(fallbackCanonicalGraph.Edges)
-		write(w, http.StatusOK, map[string]any{
-			"meta": meta,
-			"data": map[string]any{"nodes": nodes, "edges": fallbackCanonicalGraph.Edges},
-		})
+		slog.Error("query_dependency_edges_failed", "error", err)
+		write(w, http.StatusServiceUnavailable, map[string]string{"error": "data temporarily unavailable"})
 		return
 	}
 	defer erows.Close()
@@ -116,9 +117,15 @@ func (a *API) handleGetDependencies(w http.ResponseWriter, r *http.Request, ctx 
 		var e DependencyEdge
 		if err := erows.Scan(&e.ID, &e.SourceNodeID, &e.TargetNodeID, &e.RelationshipType, &e.MaterialityRule, &e.ThresholdValue, &e.CreatedAt); err != nil {
 			slog.Error("scan_edge_failed", "error", err)
-			continue
+			write(w, http.StatusServiceUnavailable, map[string]string{"error": "data temporarily unavailable"})
+			return
 		}
 		edges = append(edges, e)
+	}
+	if err := erows.Err(); err != nil {
+		slog.Error("rows_dependency_edges_failed", "error", err)
+		write(w, http.StatusServiceUnavailable, map[string]string{"error": "data temporarily unavailable"})
+		return
 	}
 
 	meta["node_count"] = len(nodes)
