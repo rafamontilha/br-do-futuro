@@ -104,3 +104,24 @@
 - `./scripts/verify.sh`: aprovado, exit code 0; **172 testes Python**, testes/vet Go,
   build/typecheck web e `git diff --check`. Nenhum volume foi excluído/recriado;
   não foi executado um novo bootstrap Docker ponta a ponta nesta revisão.
+
+## Evidência técnica — grupo 3 (2026-11-02)
+
+- Branch `phase-1-backtesting-engine`, criada da `main` após o merge da PR #9
+  (`44ed543`). Motor, persistência transacional e CLI implementados sem dependências novas.
+- `./scripts/verify.sh`: **aprovado**, exit code 0; **192 testes Python** em `bdf_test`
+  (4,84 s), testes/vet Go, build/typecheck web e `git diff --check`.
+- `tests/test_backtesting.py`: **20 testes aprovados**, incluindo valores conhecidos
+  de MAE/RMSE/viés/cobertura/razão, primeira publicação vs. revisão, corte temporal,
+  origem igual/posterior ao realizado, isolamento fixture/source e ex_ante/reconstructed,
+  benchmarks incompletos/erro zero, limiar 8, hash de inputs/limiar, idempotência
+  concorrente, rollback após gravação parcial, conexões dict_row/tuple_row e CLI.
+- CLI `python -m bdf.backtesting --help` executada; entrada `main` exercitada contra
+  `bdf_test`, incluindo reexecução idempotente e rejeição de corte sem timezone.
+- Uma execução anterior teve 191 testes aprovados e um deadlock na preparação de um
+  teste existente. A consulta posterior não encontrou conexões remanescentes no banco;
+  a verificação completa subsequente passou. Não foram terminadas sessões externas nem
+  introduzido retry para mascarar erros de banco.
+- Os pares de teste são sintéticos; não demonstram desempenho econômico nem coleta
+  oficial. API/painel (grupos 4–5), smoke ponta a ponta e walkthrough humano seguem
+  pendentes. Gate 0→1 e aprovação metodológica permanecem pendentes.

@@ -46,6 +46,15 @@
      (idempotente; falha de captura gera erro explícito, sem fallback silencioso).
 
 ### 3. Motor de backtesting (Python worker)
+
+> **Status (2026-11-02):** implementado em `ingestion/bdf/backtesting.py`, com CLI
+> de replay, métricas decimais e 20 testes em `tests/test_backtesting.py`;
+> `./scripts/verify.sh` aprovado com 192 testes Python e checks Go/web.
+> `match_realized` recebe `as_of` explicitamente. Primeira publicação e última vintage
+> capturada no corte são selecionadas na mesma consulta SQL dos snapshots/benchmarks.
+> O hash inclui corte temporal, modo, limiar de amostra e inputs completos.
+> Evidências e limitações estão em `validation.md`; grupos 4–6 seguem pendentes.
+
 3.1. Criar `ingestion/bdf/backtesting.py` com `match_realized(conn, snapshot, target)`:
      `first_release` = observação da menor `known_at` para o período;
      `latest` = maior `known_at <= as_of`.
