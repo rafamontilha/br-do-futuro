@@ -130,3 +130,27 @@
   2. Definição de horizonte para séries anuais com dados mensais parciais (ex.: IPCA 12m em
      dezembro) — precisa de regra escrita em `specs/methodology.md`?
   3. Diebold-Mariano / testes de significância ficam para o relatório de desempenho (item 6)?
+
+## Regras operacionais do motor — grupo 3 (2026-11-02)
+
+- Erro = forecast − realizado; métricas usam `Decimal`. Cobertura usa apenas os pares
+  com intervalo completo e retorna nulo quando nenhum intervalo está disponível.
+- `as_of` deve ter timezone e não pode estar no futuro em relação ao PostgreSQL.
+  Só entram snapshots já registrados (`created_at <= as_of`) e originados até o corte;
+  `latest` significa última vintage **capturada no sistema** até o corte, sem afirmar
+  consulta atual à fonte oficial.
+- Um alvo cuja primeira publicação já era conhecida na origem é excluído para ambos
+  os alvos de avaliação. Uma revisão posterior não o requalifica como previsão ex-ante.
+  Snapshots reconstruídos elegíveis são agregados separadamente dos ex-ante.
+- Random walk é pareado por indicador, modo, origem, período-alvo, horizonte, unidade,
+  tipo de origem e mesma observação realizada. O MAE relativo só é calculado com
+  benchmark para **toda** a amostra do grupo; falta de pares ou MAE do benchmark zero
+  produz nulo. Versões concorrentes ambíguas do random walk geram erro explícito.
+- O hash inclui o corte temporal normalizado UTC, modo, `MIN_SAMPLE` e todos os
+  snapshots/realizados selecionados. A versão do motor integra a chave de idempotência.
+  Reexecução com o mesmo corte/inputs/código retorna o mesmo run; outro corte é uma
+  avaliação distinta, ainda que as observações não tenham mudado.
+- Todas as métricas e o run são gravados em uma transação. Unidades incompatíveis,
+  erros numéricos e falhas SQL propagam erro e não deixam resultados parciais.
+- Estas são regras técnicas do piloto experimental; não ratificam metodologia nem
+  demonstram desempenho econômico. Limiar 8 continua sujeito à revisão humana.

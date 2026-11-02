@@ -58,3 +58,20 @@ docker compose exec -T db psql -v ON_ERROR_STOP=1 -U bdf -d bdf < db/009_forecas
 O teste `tests/test_compose_bootstrap.py` exige paridade ordenada entre as migrações
 versionadas e os mounts de inicialização somente leitura do serviço `db`. Isso evita
 que a suíte aplique uma migração ausente no fluxo de inicialização documentado.
+
+## Backtesting experimental — grupo 3
+
+Com o ambiente Python e `DATABASE_URL` configurados, execute a avaliação dos
+snapshots já congelados, escolhendo explicitamente modo e corte temporal:
+
+```sh
+python -m bdf.backtesting --mode fixture --as-of '2026-11-02T00:00:00-03:00'
+```
+
+A data acima é um exemplo de corte histórico, não uma afirmação de atualidade.
+Use um instante posterior à criação dos snapshots que deseja avaliar. O comando
+não busca dados, não reconstrói snapshots e não publica métricas/Guidance. Retorna
+`run_id`, corte, modo, quantidade de grupos e se o run foi reutilizado. Sem pares
+elegíveis grava um run com zero métricas; isso não demonstra qualidade do modelo.
+Snapshots fixture/reconstruídos continuam separados dos ex-ante. `latest` usa
+somente vintages capturadas até o corte. O endpoint e painel são etapas posteriores.
