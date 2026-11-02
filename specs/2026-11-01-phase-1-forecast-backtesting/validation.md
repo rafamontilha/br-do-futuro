@@ -59,3 +59,22 @@
 - [ ] PR referencia `specs/2026-11-01-phase-1-forecast-backtesting/`.
 - [ ] Roadmap atualizado indicando a entrega parcial do item 4 (backtesting), com alertas
       por calendário ainda pendentes.
+
+## Evidência técnica — grupo 2 (2026-11-02)
+
+- `./scripts/verify.sh`: **aprovado**, exit code 0; **168 testes Python** em
+  PostgreSQL dedicado `bdf_test` (3,45 s), testes e vet Go, build e typecheck web,
+  `git diff --check`.
+- `tests/test_forecast_snapshots.py`: **15 testes aprovados**; conexões `dict_row`
+  e `tuple_row`, horizontes nativos, classificação fixture/reconstructed e source/ex_ante,
+  benchmarks sem revisão posterior à origem, isolamento de modos, replay idempotente,
+  rollback do worker por erro de captura e atomicidade da captura de trajetórias.
+- O teste em modo source usa payload sintético para exercitar o contrato; não constitui
+  evidência de captura oficial nem validação econômica.
+- O registro anterior dizia que dois testes haviam sido escritos após a primeira
+  execução. O comando que os gravaria foi rejeitado antes da execução. Eles foram
+  efetivamente adicionados e validados nesta retomada.
+- O relógio do PostgreSQL é usado como origem nos testes para evitar divergência entre
+  o relógio do host e o do banco. Origens futuras continuam rejeitadas.
+- Grupos 3–6 e walkthrough humano da feature continuam pendentes. Esta evidência
+  técnica não conclui o gate 0→1 nem aprovação metodológica.

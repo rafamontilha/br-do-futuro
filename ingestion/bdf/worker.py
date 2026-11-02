@@ -11,10 +11,14 @@ import uuid
 from .scenario import SCENARIOS, MODEL_VERSION, fiscal_path, fingerprint
 from .dependency_engine import resolve_recalculation_plan
 from .materiality import evaluate_materiality
+from .forecast_snapshots import capture_scenario_snapshots
 
 
 def process_event(conn, event):
     p = event["payload"]
+    if event["event_type"] == "ScenarioRecalculated":
+        capture_scenario_snapshots(conn, p["scenario_run_id"])
+        return
     if event["event_type"] == "DynamicSimulationRequested":
         sim_id = p["simulation_id"]
         base_debt = p["base_debt_pct"]
@@ -77,6 +81,9 @@ def process_event(conn, event):
         conn.execute("""INSERT INTO scenario_run(id,scenario_id,model_version,inputs,outputs,event_id,mode)
             VALUES (%s,%s,%s,%s,%s,%s,%s)""",
             (run_id, scenario_id, MODEL_VERSION, Jsonb(inputs), Jsonb(outputs), event["id"], p["mode"]))
+
+        # Freeze forecasts before acknowledging the event; failures roll back the run.
+        capture_scenario_snapshots(conn, run_id)
 
         # 2. Evaluate multi-level materiality rules (delta and target breach).
         # Even without previous outputs (initial run), target breach (debt > 80%) is evaluated.

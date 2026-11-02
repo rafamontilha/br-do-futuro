@@ -22,6 +22,17 @@
      (grupo 2) a partir das trajetórias existentes, marcados `reconstructed`/`fixture`.
 
 ### 2. Captura de snapshots (Python worker)
+
+> **Status (2026-11-02):** implementação em `ingestion/bdf/forecast_snapshots.py`
+> e integração transacional em `worker.py`. Grupo 2 validado por 15 testes de snapshots
+> em PostgreSQL `bdf_test`; `./scripts/verify.sh` aprovado com 168 testes Python,
+> testes/vet Go, build/typecheck web e `git diff --check`.
+> Trajetórias mutáveis são conservadoramente `reconstructed`; horizontes seguem a
+> frequência nativa do catálogo, mesmo nos pontos anuais. Intervalos sem nível nominal
+> são omitidos com contador explícito, sem inventar confiança. Benchmarks recebem os
+> snapshots para parear origem, alvo e horizonte (ajuste da assinatura de 2.3).
+> Nenhum gate, validação econômica ou aprovação humana declarado concluído.
+
 2.1. Criar `ingestion/bdf/forecast_snapshots.py` com `capture_trajectory_snapshots(conn, as_of)`
      que lê `indicator_trajectories` com `conn.cursor(row_factory=dict_row)` e grava
      `forecast_snapshot` com ID determinístico (`ON CONFLICT DO NOTHING`).
