@@ -553,6 +553,11 @@ func (a *API) handle(w http.ResponseWriter, r *http.Request) {
 			a.handleCreateDecisionAudit(w, r, ctx, auth)
 			return
 		}
+		if strings.HasPrefix(r.URL.Path, "/v1/alerts/") && strings.HasSuffix(r.URL.Path, "/review") {
+			alertID := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/v1/alerts/"), "/review")
+			a.handleAlertReview(w, r, ctx, alertID, auth)
+			return
+		}
 		w.Header().Set("Allow", "GET")
 		write(w, http.StatusMethodNotAllowed, map[string]string{"error": "read-only API"})
 		return
@@ -636,6 +641,11 @@ func (a *API) handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.URL.Path == "/v1/dependencies" {
+		a.handleGetDependencies(w, r, ctx, meta, mode)
+		return
+	}
+
 	if r.URL.Path == "/v1/trajectories" || strings.HasPrefix(r.URL.Path, "/v1/trajectories/") {
 		a.handleGetTrajectories(w, r, ctx, meta, mode, asOf)
 		return
@@ -665,9 +675,25 @@ func (a *API) handle(w http.ResponseWriter, r *http.Request) {
    SELECT DISTINCT ON(scenario_id) * FROM scenario_run WHERE mode=$1 AND created_at <= $2
    ORDER BY scenario_id,created_at DESC) t`
 	case r.URL.Path == "/v1/alerts":
+		reviewStatus := strings.TrimSpace(r.URL.Query().Get("review_status"))
+		severity := strings.TrimSpace(r.URL.Query().Get("severity"))
+		args = append(args, reviewStatus, severity)
 		sql = `SELECT COALESCE(jsonb_agg(to_jsonb(t)), '[]') FROM (
-   SELECT a.* FROM alert a JOIN scenario_run s ON a.scenario_run_id=s.id
-   WHERE s.mode=$1 AND a.created_at <= $2 ORDER BY a.created_at DESC) t`
+   SELECT * FROM (
+     SELECT a.id, a.scenario_run_id, a.severity, a.owner_role, a.sla_hours,
+            CASE WHEN a.reviewed_at IS NOT NULL AND a.reviewed_at <= $2 THEN a.status ELSE 'new' END AS status,
+            CASE WHEN a.reviewed_at IS NOT NULL AND a.reviewed_at <= $2 THEN a.review_status ELSE 'pending_human_review' END AS review_status,
+            a.evidence,
+            CASE WHEN a.reviewed_at IS NOT NULL AND a.reviewed_at <= $2 THEN a.reviewed_by ELSE NULL END AS reviewed_by,
+            CASE WHEN a.reviewed_at IS NOT NULL AND a.reviewed_at <= $2 THEN a.review_justification ELSE NULL END AS review_justification,
+            CASE WHEN a.reviewed_at IS NOT NULL AND a.reviewed_at <= $2 THEN a.reviewed_at ELSE NULL END AS reviewed_at,
+            a.created_at
+     FROM alert a LEFT JOIN scenario_run s ON a.scenario_run_id=s.id
+     WHERE (s.mode=$1 OR (s.id IS NULL AND a.evidence->>'mode' = $1)) AND a.created_at <= $2
+   ) effective_alerts
+   WHERE ($3 = '' OR effective_alerts.review_status = $3)
+     AND ($4 = '' OR effective_alerts.severity = $4)
+   ORDER BY effective_alerts.created_at DESC) t`
 	default:
 		write(w, http.StatusNotFound, map[string]string{"error": "not found"})
 		return

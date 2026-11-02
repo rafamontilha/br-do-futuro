@@ -211,7 +211,33 @@ for t in ipca_past:
     if t['period_label'] in ('2023', '2024'):
         assert t['actual_value'] is None
 
+# 9. Grafo de Dependências (DAG) em /v1/dependencies
+deps = get('/v1/dependencies')['data']
+assert len(deps['nodes']) >= 10
+assert len(deps['edges']) >= 8
+node_ids = {n['id'] for n in deps['nodes']}
+assert 'indicator:br.debt.gross_pct_gdp' in node_ids
+assert 'model:fiscal_path_v1' in node_ids
+assert 'scenario:continuity' in node_ids
+assert 'guidance_target:debt_stabilization' in node_ids
+
+# 10. Validação de Workflow de Revisão Humana de Alertas
+alerts_pending = get('/v1/alerts?mode=fixture&review_status=pending_human_review')['data']
+assert isinstance(alerts_pending, list)
+
+# Validação de autorização no endpoint de revisão
+unauth_rev = requests.post(base+'/v1/alerts/nonexistent/review', json={'action': 'approve', 'justification': 'teste justificativa longa formal'}, timeout=10)
+assert unauth_rev.status_code == 401
+
+forbidden_rev = requests.post(base+'/v1/alerts/nonexistent/review', json={'action': 'approve', 'justification': 'teste justificativa longa formal'},
+    headers={'X-API-Key': 'bdf-producer-token-2026'}, timeout=10)
+assert forbidden_rev.status_code == 403
+
+bad_rev = requests.post(base+'/v1/alerts/nonexistent/review', json={'action': 'approve', 'justification': 'curta'},
+    headers={'X-API-Key': 'bdf-reviewer-token-2026'}, timeout=10)
+assert bad_rev.status_code == 400
+
 real=get('/v1/observations')['data']
 assert all(o['quality_status']=='provisional' for o in real)
 assert get('/v1/observations')['meta']['mode']=='source'
-print(f'API smoke passed: 6 synthetic points, 3 scenarios, 3 alerts, 7 institutions, dynamic simulations, source health ({len(sources_health)} schedules), outbox replay, {len(proposals)} proposals, {len(commitments)} guidance commitments, {len(calibrations)} calibrations, RBAC auth, rate limiting, pagination, 4-plane observability, and {len(trajs)} macro trajectories across 6 P0 series verified; {len(real)} provisional source points')
+print(f'API smoke passed: 6 synthetic points, 3 scenarios, 3 alerts, 7 institutions, dynamic simulations, source health ({len(sources_health)} schedules), outbox replay, {len(proposals)} proposals, {len(commitments)} guidance commitments, {len(calibrations)} calibrations, RBAC auth, rate limiting, pagination, 4-plane observability, {len(trajs)} macro trajectories, {len(deps["nodes"])} DAG nodes, {len(deps["edges"])} edges, and alert review workflow verified; {len(real)} provisional source points')
