@@ -192,14 +192,16 @@ def test_selic_and_gdp_ingestion_do_not_corrupt_fiscal_scenarios(db):
 
 
 def test_historical_ipca_revision_compares_same_reference_period(db):
-    # Initial ingestion with Jan=3.00% and Jun=4.00% (both within [1.50, 4.50], delta immaterial)
+    # Initial ingestion with Jan=3.00% and Jun=4.00% (both within [1.50, 4.50])
     fixture_initial = b'[{"data":"01/01/2024","valor":"3.00"},{"data":"01/06/2024","valor":"4.00"}]'
     ingest(db, "br.ipca.12m", fixture_initial, "fixture:ipca-initial-series")
     drain(db)
 
-    # Clear initial alert (if any from +1.00 delta between Jan and Jun on initial batch)
     with psycopg.connect(db) as conn:
-        conn.execute("DELETE FROM alert WHERE evidence->>'indicator_id' = 'br.ipca.12m'")
+        initial_alerts = conn.execute("""
+            SELECT id FROM alert WHERE evidence->>'indicator_id' = 'br.ipca.12m'
+        """).fetchall()
+        assert len(initial_alerts) == 0
 
     # Now ingest a revision ONLY to Jan (from 3.00% to 3.10%, +0.10 p.p. < 0.25 p.p. threshold)
     fixture_jan_minor_rev = b'[{"data":"01/01/2024","valor":"3.10"}]'
@@ -214,9 +216,10 @@ def test_historical_ipca_revision_compares_same_reference_period(db):
         # Must NOT compare Jan (3.10) against Jun (4.00) and must NOT fire a false alert
         assert len(alerts) == 0
 
-    # Now ingest a material revision to Jan (from 3.10% to 3.50%, +0.40 p.p. >= 0.25 p.p. threshold)
-    fixture_jan_material_rev = b'[{"data":"01/01/2024","valor":"3.50"}]'
-    ingest(db, "br.ipca.12m", fixture_jan_material_rev, "fixture:ipca-jan-material-rev")
+    # Now ingest a batch revising BOTH Jan (3.10% -> 3.50%, +0.40 p.p. material)
+    # AND Jun (4.00% -> 4.10%, +0.10 p.p. immaterial) in the same vintage
+    fixture_multi_rev = b'[{"data":"01/01/2024","valor":"3.50"},{"data":"01/06/2024","valor":"4.10"}]'
+    ingest(db, "br.ipca.12m", fixture_multi_rev, "fixture:ipca-multi-rev")
     drain(db)
 
     with psycopg.connect(db) as conn:
@@ -232,3 +235,20 @@ def test_historical_ipca_revision_compares_same_reference_period(db):
         assert ev["delta_pp"] == "0.40"
         assert ev["target_breach"] is False
         assert ev["rule"] == "delta_absolute"
+
+
+def test_empty_fiscal_execution_scope_honored_from_persisted_graph(db):
+    with psycopg.connect(db) as conn:
+        conn.execute("""
+            DELETE FROM dependency_graph_edges
+            WHERE source_node_id = 'indicator:br.debt.gross_pct_gdp'
+              AND target_node_id = 'model:fiscal_path_v1'
+        """)
+
+    fixture_debt = b'[{"data":"01/01/2024","valor":"75.0"}]'
+    ingest(db, "br.debt.gross_pct_gdp", fixture_debt, "fixture:debt-no-model-edge")
+    drain(db)
+
+    with psycopg.connect(db) as conn:
+        runs = conn.execute("SELECT count(*) FROM scenario_run").fetchone()[0]
+        assert runs == 0

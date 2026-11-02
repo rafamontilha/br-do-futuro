@@ -8,7 +8,7 @@ from psycopg.types.json import Jsonb
 from opentelemetry import trace
 
 import uuid
-from .scenario import DEPENDENCIES, SCENARIOS, MODEL_VERSION, fiscal_path, fingerprint
+from .scenario import SCENARIOS, MODEL_VERSION, fiscal_path, fingerprint
 from .dependency_engine import resolve_recalculation_plan
 from .materiality import evaluate_materiality
 
@@ -53,8 +53,6 @@ def process_event(conn, event):
             for node in plan.get("affected_nodes", [])
             if node["node_id"].startswith("scenario:") and node["node_id"].split(":", 1)[1] in SCENARIOS
         ]
-        if not affected_scenario_ids:
-            affected_scenario_ids = DEPENDENCIES.get(p["indicator_id"], [])
 
     for scenario_id in affected_scenario_ids:
         # Only information already visible at this event's ingestion time may be used.
@@ -121,10 +119,20 @@ def process_event(conn, event):
         ]
     for target in affected_targets:
         target_id = target["node_id"]
-        curr_obs = conn.execute("""SELECT o.*, v.known_at FROM observation o
-            JOIN vintage v ON v.id=o.vintage_id WHERE o.indicator_id=%s AND o.mode=%s
-            AND v.id=%s ORDER BY o.reference_period DESC LIMIT 1""",
-            (p["indicator_id"], p["mode"], p["vintage_id"])).fetchone()
+        if p.get("observation_id"):
+            curr_obs = conn.execute("""SELECT o.*, v.known_at FROM observation o
+                JOIN vintage v ON v.id=o.vintage_id WHERE o.id=%s""",
+                (p["observation_id"],)).fetchone()
+        elif p.get("reference_period"):
+            curr_obs = conn.execute("""SELECT o.*, v.known_at FROM observation o
+                JOIN vintage v ON v.id=o.vintage_id WHERE o.indicator_id=%s AND o.mode=%s
+                AND v.id=%s AND o.reference_period=%s LIMIT 1""",
+                (p["indicator_id"], p["mode"], p["vintage_id"], p["reference_period"])).fetchone()
+        else:
+            curr_obs = conn.execute("""SELECT o.*, v.known_at FROM observation o
+                JOIN vintage v ON v.id=o.vintage_id WHERE o.indicator_id=%s AND o.mode=%s
+                AND v.id=%s ORDER BY o.reference_period DESC LIMIT 1""",
+                (p["indicator_id"], p["mode"], p["vintage_id"])).fetchone()
         if not curr_obs:
             continue
 
@@ -145,12 +153,12 @@ def process_event(conn, event):
             ORDER BY v.known_at DESC LIMIT 1""",
             (p["indicator_id"], p["mode"], curr_obs["reference_period"], curr_obs["known_at"])).fetchone()
 
-        # If this is a newly released latest reference_period (no prior vintage for same period),
-        # compare against the immediately preceding reference_period as-of this vintage.
+        # If this is a newly released latest reference_period from a subsequent vintage,
+        # compare against the immediately preceding reference_period from prior vintages.
         if prev_obs is None and is_latest_period:
             prev_obs = conn.execute("""SELECT o.*, v.known_at FROM observation o
                 JOIN vintage v ON v.id=o.vintage_id WHERE o.indicator_id=%s AND o.mode=%s
-                AND o.reference_period < %s AND v.known_at <= %s
+                AND o.reference_period < %s AND v.known_at < %s
                 ORDER BY o.reference_period DESC, v.known_at DESC LIMIT 1""",
                 (p["indicator_id"], p["mode"], curr_obs["reference_period"], curr_obs["known_at"])).fetchone()
 
