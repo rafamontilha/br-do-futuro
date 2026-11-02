@@ -128,6 +128,11 @@ export function MaterialAlertsSection({
                     )}
                   </div>
                   <div style={{ fontSize: "12px", color: "var(--muted, #52675d)", marginTop: "4px" }}>
+                    {a.evidence?.scenario_id
+                      ? `Cenário: ${a.evidence.scenario_id} · `
+                      : a.evidence?.indicator_id
+                      ? `Indicador: ${a.evidence.indicator_id}${a.evidence.reference_period ? ` (${a.evidence.reference_period})` : ""} · `
+                      : ""}
                     Limiar experimental: {a.evidence?.threshold_pp || "0,5"} p.p. · SLA: {a.sla_hours}h · Papel: {a.owner_role}
                     {a.reviewed_by && (
                       <span style={{ marginLeft: "6px" }}>

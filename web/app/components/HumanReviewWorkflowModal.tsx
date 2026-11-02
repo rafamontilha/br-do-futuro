@@ -223,8 +223,15 @@ export function HumanReviewWorkflowModal({
               <div style={{ fontFamily: "monospace", fontWeight: 600, fontSize: "12px" }}>{alert.id.slice(0, 18)}...</div>
             </div>
             <div>
-              <span style={{ color: "var(--muted, #52675d)", fontSize: "11.5px" }}>Cenário / Modelo:</span>
-              <div style={{ fontWeight: 600 }}>{alert.evidence?.scenario_id || "Identidade Fiscal v1"}</div>
+              <span style={{ color: "var(--muted, #52675d)", fontSize: "11.5px" }}>
+                {alert.evidence?.scenario_id ? "Cenário / Modelo:" : "Indicador / Meta:"}
+              </span>
+              <div style={{ fontWeight: 600 }}>
+                {alert.evidence?.scenario_id ||
+                  (alert.evidence?.indicator_id
+                    ? `${alert.evidence.indicator_id}${alert.evidence.target_node_id ? ` → ${alert.evidence.target_node_id.replace("guidance_target:", "")}` : ""}`
+                    : "Identidade Fiscal v1")}
+              </div>
             </div>
             <div>
               <span style={{ color: "var(--muted, #52675d)", fontSize: "11.5px" }}>Variação Absoluta (Δ):</span>
@@ -236,6 +243,21 @@ export function HumanReviewWorkflowModal({
               <span style={{ color: "var(--muted, #52675d)", fontSize: "11.5px" }}>Limiar Experimental:</span>
               <div style={{ fontWeight: 600 }}>{alert.evidence?.threshold_pp || "0.5"} p.p.</div>
             </div>
+            {alert.evidence?.reference_period && (
+              <div>
+                <span style={{ color: "var(--muted, #52675d)", fontSize: "11.5px" }}>Período de Referência:</span>
+                <div style={{ fontWeight: 600 }}>{alert.evidence.reference_period}</div>
+              </div>
+            )}
+            {alert.evidence?.current_value && (
+              <div>
+                <span style={{ color: "var(--muted, #52675d)", fontSize: "11.5px" }}>Valor Observado (Anterior → Atual):</span>
+                <div style={{ fontWeight: 600 }}>
+                  {alert.evidence.previous_value ? `${alert.evidence.previous_value}% → ` : ""}
+                  {alert.evidence.current_value}%
+                </div>
+              </div>
+            )}
           </div>
           {alert.evidence?.target_breach && (
             <div
@@ -251,7 +273,7 @@ export function HumanReviewWorkflowModal({
               }}
             >
               {alert.evidence?.target_range ? (
-                `⚠️ Rompimento de Banda de Meta: Valor apurado (${alert.evidence.current_value}%) fora do intervalo institucional [${alert.evidence.target_range[0]}%, ${alert.evidence.target_range[1]}%].`
+                `⚠️ Rompimento de Banda de Meta: Valor apurado (${alert.evidence.current_value}%) fora do intervalo [${alert.evidence.target_range[0]}%, ${alert.evidence.target_range[1]}%].`
               ) : (
                 `⚠️ Alerta de Limiar Experimental: Nova trajetória ultrapassa o teto ilustrativo de calibração (${alert.evidence?.target_cap ?? "80.00"}% PIB — hipótese experimental pendente de ratificação oficial).`
               )}

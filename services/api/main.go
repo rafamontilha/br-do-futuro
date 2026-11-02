@@ -679,13 +679,21 @@ func (a *API) handle(w http.ResponseWriter, r *http.Request) {
 		severity := strings.TrimSpace(r.URL.Query().Get("severity"))
 		args = append(args, reviewStatus, severity)
 		sql = `SELECT COALESCE(jsonb_agg(to_jsonb(t)), '[]') FROM (
-   SELECT a.id, a.scenario_run_id, a.severity, a.owner_role, a.sla_hours, a.status,
-          a.review_status, a.evidence, a.reviewed_by, a.review_justification, a.reviewed_at, a.created_at
-   FROM alert a LEFT JOIN scenario_run s ON a.scenario_run_id=s.id
-   WHERE (s.mode=$1 OR (s.id IS NULL AND a.evidence->>'mode' = $1)) AND a.created_at <= $2
-     AND ($3 = '' OR a.review_status = $3)
-     AND ($4 = '' OR a.severity = $4)
-   ORDER BY a.created_at DESC) t`
+   SELECT * FROM (
+     SELECT a.id, a.scenario_run_id, a.severity, a.owner_role, a.sla_hours,
+            CASE WHEN a.reviewed_at IS NOT NULL AND a.reviewed_at <= $2 THEN a.status ELSE 'new' END AS status,
+            CASE WHEN a.reviewed_at IS NOT NULL AND a.reviewed_at <= $2 THEN a.review_status ELSE 'pending_human_review' END AS review_status,
+            a.evidence,
+            CASE WHEN a.reviewed_at IS NOT NULL AND a.reviewed_at <= $2 THEN a.reviewed_by ELSE NULL END AS reviewed_by,
+            CASE WHEN a.reviewed_at IS NOT NULL AND a.reviewed_at <= $2 THEN a.review_justification ELSE NULL END AS review_justification,
+            CASE WHEN a.reviewed_at IS NOT NULL AND a.reviewed_at <= $2 THEN a.reviewed_at ELSE NULL END AS reviewed_at,
+            a.created_at
+     FROM alert a LEFT JOIN scenario_run s ON a.scenario_run_id=s.id
+     WHERE (s.mode=$1 OR (s.id IS NULL AND a.evidence->>'mode' = $1)) AND a.created_at <= $2
+   ) effective_alerts
+   WHERE ($3 = '' OR effective_alerts.review_status = $3)
+     AND ($4 = '' OR effective_alerts.severity = $4)
+   ORDER BY effective_alerts.created_at DESC) t`
 	default:
 		write(w, http.StatusNotFound, map[string]string{"error": "not found"})
 		return
