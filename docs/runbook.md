@@ -75,3 +75,17 @@ não busca dados, não reconstrói snapshots e não publica métricas/Guidance. 
 elegíveis grava um run com zero métricas; isso não demonstra qualidade do modelo.
 Snapshots fixture/reconstruídos continuam separados dos ex-ante. `latest` usa
 somente vintages capturadas até o corte. O endpoint e painel são etapas posteriores.
+
+## Consulta de backtesting — grupo 4
+
+`GET /v1/backtests?mode=fixture` retorna o último run conhecido com suas métricas.
+Aceita `as_of` com timezone e filtros `indicator_id`, `horizon`, `target` e
+`forecast_source`. O padrão é `source`; sem run retorna `run: null` e `data: []`,
+sem banco retorna 503 em ambos os modos. Filtros vazios não recuperam runs antigos.
+`experimental: true`, `origin_kind`, unidade e limiar de amostra devem acompanhar
+qualquer apresentação futura dessas métricas.
+
+`GET /v1/observability/metrics?mode=fixture` inclui `models.backtesting`, limitado ao
+modo/corte escolhido. As contagens legadas dos outros planos continuam globais.
+O bloco separa cobertura total e ex-ante; não atesta qualidade dos modelos. Banco
+indisponível produz bloco nulo, nunca zeros artificiais; erros SQL retornam 503.

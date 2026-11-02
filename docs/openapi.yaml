@@ -225,12 +225,102 @@ paths:
         '400': {description: Dados da decisão inválidos}
         '401': {description: Não autenticado}
         '403': {description: Permissões insuficientes (mínimo reviewer)}
+  /v1/backtests:
+    get:
+      summary: Métricas experimentais do último run conhecido no corte temporal
+      description: >-
+        Seleciona o último run do modo por as_of, created_at e ID (decrescentes),
+        exigindo as_of e created_at menores ou iguais ao corte da consulta.
+        Filtros se aplicam somente às métricas desse run, sem buscar em runs antigos.
+        Sem run retorna run nulo e data vazio. Sem banco, inclusive fixture, retorna 503.
+        latest significa última vintage capturada no corte, não verificação da origem oficial.
+      parameters:
+        - {$ref: '#/components/parameters/Mode'}
+        - {$ref: '#/components/parameters/AsOf'}
+        - {name: indicator_id, in: query, schema: {type: string}}
+        - {name: horizon, in: query, schema: {type: integer, minimum: 0, maximum: 2147483647}}
+        - {name: target, in: query, schema: {type: string, enum: [first_release, latest]}}
+        - name: forecast_source
+          in: query
+          schema:
+            type: string
+            enum: [trajectory, scenario_run, benchmark_random_walk, benchmark_seasonal_naive]
+      responses:
+        '200':
+          description: Run e métricas separados por fonte, alvo e tipo de origem; sem agregação adicional
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BacktestEnvelope'}
+        '400': {description: Parâmetros inválidos}
+        '503': {description: Banco ou consulta indisponível; nenhum fallback estático}
   /v1/observability/metrics:
     get:
       summary: Métricas consolidadas dos 4 planos de observabilidade e conformidade de SLOs
+      description: >-
+        models.backtesting contém experimental, mode, as_of, ex_ante_snapshots_count,
+        last_run, backtested_indicators_count, backtested_indicator_ids e
+        ex_ante_backtested_indicators_count. Somente esses novos campos são limitados
+        por modo/as_of; os campos legados dos demais planos continuam globais.
+        Contagem de snapshots ex-ante exclui benchmarks; cobertura usa só o run selecionado,
+        incluindo grupos reconstruídos no total e separando a contagem ex-ante.
+        Sem banco acessível, backtesting é nulo e backtesting_status é unavailable.
+        Consulta de backtesting falha explicitamente com 503; sem run conhecido as
+        contagens são zero e last_run é nulo. available não significa validação econômica.
+      parameters:
+        - {$ref: '#/components/parameters/Mode'}
+        - {$ref: '#/components/parameters/AsOf'}
       responses:
         '200': {$ref: '#/components/responses/Envelope'}
+        '503': {description: Consulta das métricas de backtesting indisponível}
 components:
+  schemas:
+    BacktestRun:
+      type: object
+      required: [run_id, inputs_hash, code_version, as_of, min_sample, mode, created_at]
+      properties:
+        run_id: {type: string, format: uuid}
+        inputs_hash: {type: string}
+        code_version: {type: string}
+        as_of: {type: string, format: date-time}
+        min_sample: {type: integer, minimum: 1}
+        mode: {type: string, enum: [source, fixture]}
+        created_at: {type: string, format: date-time}
+    BacktestMetric:
+      type: object
+      required: [run_id, indicator_id, horizon, forecast_source, target, origin_kind, unit,
+                 n_obs, mae, rmse, bias, interval_coverage, relative_mae_vs_rw, insufficient_sample]
+      properties:
+        run_id: {type: string, format: uuid}
+        indicator_id: {type: string}
+        horizon: {type: integer, minimum: 0}
+        forecast_source:
+          type: string
+          enum: [trajectory, scenario_run, benchmark_random_walk, benchmark_seasonal_naive]
+        target: {type: string, enum: [first_release, latest]}
+        origin_kind: {type: string, enum: [ex_ante, reconstructed]}
+        unit: {type: string}
+        n_obs: {type: integer, minimum: 1}
+        mae: {type: number, minimum: 0}
+        rmse: {type: number, minimum: 0}
+        bias: {type: number, description: Forecast menos realizado}
+        interval_coverage: {type: [number, 'null'], minimum: 0, maximum: 1}
+        relative_mae_vs_rw: {type: [number, 'null'], minimum: 0}
+        insufficient_sample: {type: boolean}
+    BacktestEnvelope:
+      type: object
+      required: [meta, run, data, experimental]
+      properties:
+        meta:
+          type: object
+          description: Metadados padrão; as_of é o corte da consulta, distinto do as_of do run
+        experimental: {const: true}
+        run:
+          oneOf:
+            - {$ref: '#/components/schemas/BacktestRun'}
+            - {type: 'null'}
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/BacktestMetric'}
   parameters:
     Mode:
       name: mode

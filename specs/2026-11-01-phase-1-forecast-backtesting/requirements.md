@@ -154,3 +154,24 @@
   erros numéricos e falhas SQL propagam erro e não deixam resultados parciais.
 - Estas são regras técnicas do piloto experimental; não ratificam metodologia nem
   demonstram desempenho econômico. Limiar 8 continua sujeito à revisão humana.
+
+## Contrato de leitura — grupo 4 (2026-11-02)
+
+- `GET /v1/backtests` retorna `{meta, experimental: true, run, data}`. `meta.as_of`
+  é o corte da consulta; `run.as_of` é o corte do motor, com `run_id`, código, hash,
+  limiar, modo e criação. Sem run conhecido: `run: null`, `data: []`.
+- O último run do modo é escolhido por `as_of DESC, created_at DESC, id DESC`, exigindo
+  ambas as datas até o corte. Os filtros `indicator_id`, `horizon`, `target` e
+  `forecast_source` restringem suas métricas, sem buscar em execuções antigas.
+  Tipos de origem são expostos em cada métrica sem agregação adicional.
+- Modo padrão `source`. Sem banco, inclusive `fixture`, retorna 503. Parâmetros
+  inválidos retornam 400; horizonte aceita inteiros de 0 a 2147483647. Nulos de
+  cobertura/MAE relativo e o indicador de amostra insuficiente são preservados.
+- `models.backtesting` expõe contagem de snapshots ex-ante de forecasts (excluindo
+  benchmarks), último run, contagem/lista de indicadores com métricas nesse run e
+  contagem separada de indicadores ex-ante. Esse bloco respeita modo/corte; os campos
+  legados dos outros planos de observabilidade continuam globais.
+- Na observabilidade, banco não configurado/inacessível mantém o estado da plataforma
+  e retorna `backtesting: null`, `backtesting_status: unavailable`. Banco acessível com
+  erro na consulta de backtesting retorna 503 explicitamente. `available` é sucesso
+  técnico de leitura, não validação econômica.

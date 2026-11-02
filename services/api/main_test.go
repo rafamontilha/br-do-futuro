@@ -598,3 +598,29 @@ func TestAlertReviewValidation(t *testing.T) {
 		}
 	})
 }
+
+func TestBacktestsValidationAndUnavailableDatabase(t *testing.T) {
+	a := &API{}
+	for _, query := range []string{
+		"target=foo", "horizon=-1", "horizon=1.2", "horizon=", "horizon=2147483648",
+		"forecast_source=external", "mode=official", "as_of=2025-01-01",
+	} {
+		w := httptest.NewRecorder()
+		a.handle(w, httptest.NewRequest("GET", "/v1/backtests?"+query, nil))
+		if w.Code != 400 {
+			t.Fatalf("%s: expected 400, got %d: %s", query, w.Code, w.Body)
+		}
+	}
+	for _, mode := range []string{"source", "fixture"} {
+		w := httptest.NewRecorder()
+		a.handle(w, httptest.NewRequest("GET", "/v1/backtests?mode="+mode, nil))
+		if w.Code != 503 {
+			t.Fatalf("%s: expected 503, got %d", mode, w.Code)
+		}
+	}
+	w := httptest.NewRecorder()
+	a.handle(w, httptest.NewRequest("GET", "/v1/observability/metrics", nil))
+	if !strings.Contains(w.Body.String(), `"backtesting":null`) || !strings.Contains(w.Body.String(), `"backtesting_status":"unavailable"`) {
+		t.Fatalf("unconfigured database must not report backtesting zeros: %s", w.Body)
+	}
+}

@@ -25,9 +25,11 @@ type DataPlane struct {
 }
 
 type ModelsPlane struct {
-	ActiveScenariosCount      int        `json:"active_scenarios_count"`
-	CalibratedParametersCount int        `json:"calibrated_parameters_count"`
-	LastSimulationAt          *time.Time `json:"last_simulation_at,omitempty"`
+	Backtesting               json.RawMessage `json:"backtesting"`
+	BacktestingStatus         string          `json:"backtesting_status"`
+	ActiveScenariosCount      int             `json:"active_scenarios_count"`
+	CalibratedParametersCount int             `json:"calibrated_parameters_count"`
+	LastSimulationAt          *time.Time      `json:"last_simulation_at,omitempty"`
 }
 
 type DecisionsPlane struct {
@@ -37,10 +39,10 @@ type DecisionsPlane struct {
 }
 
 type SLOCompliance struct {
-	SourceWindowCompliancePct   *float64 `json:"source_window_compliance_pct"`
-	MetadataCompletenessPct     *float64 `json:"metadata_completeness_pct"`
+	SourceWindowCompliancePct  *float64 `json:"source_window_compliance_pct"`
+	MetadataCompletenessPct    *float64 `json:"metadata_completeness_pct"`
 	ScenarioLineageCoveragePct *float64 `json:"scenario_lineage_coverage_pct"`
-	ReproducibleForecastsPct    *float64 `json:"reproducible_forecasts_pct"`
+	ReproducibleForecastsPct   *float64 `json:"reproducible_forecasts_pct"`
 }
 
 type ObservabilitySnapshot struct {
@@ -52,7 +54,7 @@ type ObservabilitySnapshot struct {
 	SLOCompliance SLOCompliance  `json:"slo_compliance"`
 }
 
-func (a *API) handleGetObservabilityMetrics(w http.ResponseWriter, r *http.Request, ctx context.Context, meta map[string]any) {
+func (a *API) handleGetObservabilityMetrics(w http.ResponseWriter, r *http.Request, ctx context.Context, meta map[string]any, mode string, asOf time.Time) {
 	now := time.Now().UTC()
 	dbStatus := "unconfigured"
 
@@ -88,6 +90,7 @@ func (a *API) handleGetObservabilityMetrics(w http.ResponseWriter, r *http.Reque
 			QuarantineCount:    0,
 		},
 		Models: ModelsPlane{
+			BacktestingStatus:         "unavailable",
 			ActiveScenariosCount:      0,
 			CalibratedParametersCount: 0,
 		},
@@ -97,17 +100,25 @@ func (a *API) handleGetObservabilityMetrics(w http.ResponseWriter, r *http.Reque
 			AuditChainIntact:    nil,
 		},
 		SLOCompliance: SLOCompliance{
-			SourceWindowCompliancePct:   nil,
-			MetadataCompletenessPct:     nil,
+			SourceWindowCompliancePct:  nil,
+			MetadataCompletenessPct:    nil,
 			ScenarioLineageCoveragePct: nil,
-			ReproducibleForecastsPct:    nil,
+			ReproducibleForecastsPct:   nil,
 		},
 	}
 
 	if a.db != nil && dbStatus == "healthy" {
+		monitoring, err := a.loadBacktestMonitoring(ctx, mode, asOf)
+		if err != nil {
+			slog.Error("query_backtest_monitoring_failed", "error", err)
+			write(w, http.StatusServiceUnavailable, map[string]string{"error": "backtesting monitoring unavailable"})
+			return
+		}
+		snapshot.Models.Backtesting = monitoring
+		snapshot.Models.BacktestingStatus = "available"
 		// 1. Métricas de Plataforma: Taxa de erro a partir de execuções de ingestão
 		var totalRuns, failedRuns int
-		err := a.db.QueryRow(ctx, `
+		err = a.db.QueryRow(ctx, `
 			SELECT count(*), count(*) FILTER (WHERE status = 'failed')
 			FROM ingestion_run
 		`).Scan(&totalRuns, &failedRuns)
