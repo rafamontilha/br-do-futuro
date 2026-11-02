@@ -92,3 +92,15 @@
   e publicações posteriores à origem não alteram o resultado no replay.
 - `./scripts/verify.sh`: aprovado, exit code 0; **171 testes Python** (18 de snapshots),
   testes/vet Go, build/typecheck web e `git diff --check`.
+
+## Segunda revisão da PR #9 — bootstrap Compose (2026-11-02)
+
+- Finding P1 confirmado: o serviço `db` montava somente 001–008; o worker atualizado
+  depende de `forecast_snapshot` e falharia no fluxo documentado com banco novo.
+- Incluído mount somente leitura da 009 após a 008. Runbook documenta aplicação
+  aditiva em volumes existentes, que não executam novamente os scripts de init.
+- Regressão `test_compose_initializes_all_migrations_in_order_read_only`: verifica
+  paridade dos arquivos versionados, ordem, destinos de init e acesso somente leitura.
+- `./scripts/verify.sh`: aprovado, exit code 0; **172 testes Python**, testes/vet Go,
+  build/typecheck web e `git diff --check`. Nenhum volume foi excluído/recriado;
+  não foi executado um novo bootstrap Docker ponta a ponta nesta revisão.
