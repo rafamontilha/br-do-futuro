@@ -312,17 +312,26 @@ def _capture_scenario_snapshots(conn, scenario_run_id: str) -> Dict[str, Any]:
         dependency = cur.fetchone()
     if dependency is None or dependency["known_at"] > origin or dependency["unit"] != meta["unit"]:
         raise ValueError("Scenario input vintage unavailable or incompatible at origin")
+    last = _latest_observation(conn, indicator_id, run["mode"], origin)
+    if last is None or last["unit"] != meta["unit"]:
+        raise ValueError("Latest scenario observation unavailable or incompatible at origin")
     value_key = "debt_pct_gdp"
 
-    inserted, new = 0, []
+    inserted, new, skipped = 0, [], Counter()
     for step in run["outputs"]:
         years = int(step["horizon_years"])
         if years < 1 or Decimal(str(step["horizon_years"])) != years or value_key not in step:
             raise ValueError(f"Malformed scenario output in {scenario_run_id}: {step}")
         target = add_months(base_period, 12 * years)
+        # Queue lag can make the scenario base older than the knowledge at creation.
+        # Preserve its projected target, but measure horizon at the recorded origin.
+        horizon = compute_horizon(meta["frequency"], last["reference_period"], target)
+        if horizon <= 0:
+            skipped["target_not_after_latest_known_period"] += 1
+            continue
         snap = dict(
             indicator_id=indicator_id, target_period=target, forecast_origin_at=origin,
-            input_vintage_id=inputs["vintage_id"], horizon=12 * years, frequency="monthly",
+            input_vintage_id=inputs["vintage_id"], horizon=horizon, frequency=meta["frequency"],
             forecast_source="scenario_run", source_ref=run["id"],
             model_version=f"{run['model_version']}:{run['scenario_id']}",
             point_value=Decimal(str(step[value_key])), lower_value=None, upper_value=None,
@@ -333,7 +342,8 @@ def _capture_scenario_snapshots(conn, scenario_run_id: str) -> Dict[str, Any]:
             inserted += 1
             new.append(snap)
     benchmarks = compute_benchmark_snapshots(conn, new)
-    return dict(inserted=inserted, benchmarks_inserted=benchmarks["inserted"], skipped=benchmarks["skipped"])
+    skipped.update(benchmarks["skipped"])
+    return dict(inserted=inserted, benchmarks_inserted=benchmarks["inserted"], skipped=dict(skipped))
 
 
 def capture_trajectory_snapshots(conn, as_of: datetime, mode: Optional[str] = None) -> Dict[str, Any]:

@@ -153,3 +153,44 @@ def test_trajectory_capture_is_atomic(db, monkeypatch):
         with pytest.raises(RuntimeError, match='capture interrupted'):
             capture_trajectory_snapshots(conn, origin, 'fixture')
         assert conn.execute('SELECT count(*) FROM forecast_snapshot').fetchone()[0] == 0
+
+
+@pytest.mark.parametrize('latest_period,expected_horizons,skipped_targets', [
+    ('01/09/2025', [5, 17, 29, 41], 0),
+    ('01/02/2026', [12, 24, 36], 1),
+    ('01/03/2026', [11, 23, 35], 1),
+])
+def test_queued_vintages_measure_horizon_at_run_origin(db, latest_period, expected_horizons, skipped_targets):
+    seed(db)
+    # Both publications are known before the worker creates the older event's run.
+    body = ('[{"data":"' + latest_period + '","valor":"73"}]').encode()
+    ingest(db, DEBT, body, 'fixture:newer-period')
+    # Even newer data in another mode must not affect fixture horizons.
+    ingest(db, DEBT, b'[{"data":"01/10/2026","valor":"74"}]', 'test:other-mode', mode='source')
+    assert drain(db)['failed'] == 0
+    with psycopg.connect(db, row_factory=dict_row) as conn:
+        run = conn.execute("""SELECT * FROM scenario_run WHERE scenario_id='continuity'
+                              AND mode='fixture' AND inputs->>'reference_period'='2025-02-01'""").fetchone()
+        rows = conn.execute("SELECT * FROM forecast_snapshot WHERE source_ref=%s ORDER BY target_period", (run['id'],)).fetchall()
+        assert [r['horizon'] for r in rows] == expected_horizons
+        expected_years = range(2026 + skipped_targets, 2030)
+        assert [r['target_period'] for r in rows] == [date(y, 2, 1) for y in expected_years]
+        assert all(str(r['input_vintage_id']) == run['inputs']['vintage_id'] for r in rows)
+        for row in rows:
+            benchmark = conn.execute("""SELECT * FROM forecast_snapshot WHERE
+                forecast_source='benchmark_random_walk' AND mode='fixture'
+                AND forecast_origin_at=%s AND target_period=%s""",
+                (run['created_at'], row['target_period'])).fetchone()
+            assert benchmark['horizon'] == row['horizon']
+            assert benchmark['point_value'] == Decimal('73')
+        result = capture_scenario_snapshots(conn, run['id'])
+        assert result['inserted'] == 0
+        assert result['skipped'].get('target_not_after_latest_known_period', 0) == skipped_targets
+        original_ids = [r['id'] for r in rows]
+    # A later publication must not alter horizons on replay of the frozen origin.
+    ingest(db, DEBT, b'[{"data":"01/04/2026","valor":"75"}]', 'fixture:after-origin')
+    with psycopg.connect(db, row_factory=dict_row) as conn:
+        assert capture_scenario_snapshots(conn, run['id'])['inserted'] == 0
+        rows = conn.execute("SELECT * FROM forecast_snapshot WHERE source_ref=%s ORDER BY target_period", (run['id'],)).fetchall()
+        assert [r['id'] for r in rows] == original_ids
+        assert [r['horizon'] for r in rows] == expected_horizons

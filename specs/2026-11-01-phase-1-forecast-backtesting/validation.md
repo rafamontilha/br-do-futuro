@@ -78,3 +78,17 @@
   o relógio do host e o do banco. Origens futuras continuam rejeitadas.
 - Grupos 3–6 e walkthrough humano da feature continuam pendentes. Esta evidência
   técnica não conclui o gate 0→1 nem aprovação metodológica.
+
+## Revisão da PR #9 — horizonte na origem (2026-11-02)
+
+- Finding P2 confirmado: publicações acumuladas antes do processamento tornam o período
+  base do cenário diferente do último período conhecido em `scenario_run.created_at`.
+- Correção: manter o alvo ancorado na base do cenário e calcular o horizonte contra
+  a última observação do mesmo indicador/modo com `known_at <= forecast_origin_at`.
+  Alvos com horizonte zero ou negativo são excluídos com contador explícito.
+- Regressão parametrizada com conexão `dict_row`: base fevereiro/2025 e publicação
+  setembro/2025 resultam em horizonte 5 para fevereiro/2026; publicações fevereiro e
+  março/2026 excluem o primeiro alvo. Benchmarks mantêm o mesmo horizonte; outro modo
+  e publicações posteriores à origem não alteram o resultado no replay.
+- `./scripts/verify.sh`: aprovado, exit code 0; **171 testes Python** (18 de snapshots),
+  testes/vet Go, build/typecheck web e `git diff --check`.
