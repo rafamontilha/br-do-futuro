@@ -30,3 +30,13 @@ Este documento formaliza as práticas operacionais, padrões de engenharia e apr
    - Inspecionar ativamente os comentários e badges emitidos pelo Codex/CI nas PRs.
    - Para cada finding identificado, aplicar a correção correspondente e **obrigatoriamente adicionar teste de regressão automatizado** que reproduza o cenário problemático.
    - Reavaliar o PR via `@codex review` e registrar os aprendizados nos documentos vinculantes.
+
+## 2. Horizonte de previsão e atraso de fila
+
+O período base de um cenário determina seus alvos, mas o horizonte de backtesting
+é medido contra o último período conhecido na origem registrada do forecast.
+Com publicações acumuladas na fila, esses períodos podem diferir. Consultar somente
+vintages do mesmo indicador/modo com `known_at <= forecast_origin_at`; excluir alvos
+que não estejam à frente do último período conhecido. Replays preservam a origem e
+não incorporam publicações posteriores. Testar fila acumulada, isolamento de modos,
+alvos alcançados e correspondência dos horizontes dos benchmarks.

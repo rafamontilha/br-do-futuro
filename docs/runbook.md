@@ -43,3 +43,18 @@ Alertas permanecem `pending_human_review`; não existe ação de publicar/altera
 - Banco registra conteúdo bruto; retenção, backup/restore e migração a objetos precisam validação.
 - Calendários reais, fontes primárias completas, propostas públicas, backtesting e causalidade pendentes.
 - CI valida funcionamento técnico; nenhum teste aprova metodologia econômica ou conteúdo público.
+
+## Migração 009 em volumes existentes
+
+O Compose monta as migrações 001–009 para a inicialização de um banco vazio.
+O entrypoint do PostgreSQL não reaplica esses scripts quando o volume já contém um
+banco. Antes de executar o worker atualizado em um volume inicializado até a 008,
+aplique a migração aditiva (sem excluir ou recriar o volume):
+
+```sh
+docker compose exec -T db psql -v ON_ERROR_STOP=1 -U bdf -d bdf < db/009_forecast_backtesting.sql
+```
+
+O teste `tests/test_compose_bootstrap.py` exige paridade ordenada entre as migrações
+versionadas e os mounts de inicialização somente leitura do serviço `db`. Isso evita
+que a suíte aplique uma migração ausente no fluxo de inicialização documentado.
