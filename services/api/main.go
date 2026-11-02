@@ -576,11 +576,11 @@ func (a *API) handle(w http.ResponseWriter, r *http.Request) {
 	}
 	meta := map[string]any{
 		"methodology_version": "constitution-1.3",
-		"as_of":                asOf,
-		"mode":                 mode,
-		"freshness":            "not_verified_against_source",
-		"baseline_status":      "not_validated",
-		"publication_status":   "internal_pilot",
+		"as_of":               asOf,
+		"mode":                mode,
+		"freshness":           "not_verified_against_source",
+		"baseline_status":     "not_validated",
+		"publication_status":  "internal_pilot",
 	}
 
 	if r.URL.Path == "/v1/indicators" {
@@ -637,7 +637,12 @@ func (a *API) handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.URL.Path == "/v1/observability/metrics" {
-		a.handleGetObservabilityMetrics(w, r, ctx, meta)
+		a.handleGetObservabilityMetrics(w, r, ctx, meta, mode, asOf)
+		return
+	}
+
+	if r.URL.Path == "/v1/backtests" {
+		a.handleGetBacktests(w, r, ctx, meta, mode, asOf)
 		return
 	}
 

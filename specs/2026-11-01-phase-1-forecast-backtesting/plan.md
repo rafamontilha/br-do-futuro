@@ -69,6 +69,14 @@
      manual/replay.
 
 ### 4. API (Go)
+
+> **Status (2026-11-02):** implementado `GET /v1/backtests` e o bloco
+> `models.backtesting` da observabilidade. Contrato em `docs/openapi.yaml`.
+> Último run selecionado antes dos filtros, com `as_of` e `created_at` até o corte.
+> Testes Go reais em schema isolado de `bdf_test`, usando `bdf_reader`; CI e
+> `scripts/verify.sh` passam a executar a integração. Verificação unificada aprovada
+> com 192 testes Python, testes/vet Go e build/typecheck web. Grupo 5 pendente.
+
 4.1. Criar `services/api/backtests.go` com `handleGetBacktests`: último `backtest_run`
      com `as_of <= query as_of`, filtros `indicator_id`, `horizon`, `target`,
      `forecast_source`, `mode`; resposta inclui `run_id`, `code_version`, `as_of`,

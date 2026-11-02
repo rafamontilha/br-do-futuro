@@ -125,3 +125,22 @@
 - Os pares de teste são sintéticos; não demonstram desempenho econômico nem coleta
   oficial. API/painel (grupos 4–5), smoke ponta a ponta e walkthrough humano seguem
   pendentes. Gate 0→1 e aprovação metodológica permanecem pendentes.
+
+## Evidência técnica — grupo 4 (2026-11-02)
+
+- Branch `phase-1-backtesting-api`, criada da `main` após o merge da PR #10 (`0f8a0b8`).
+- `./scripts/verify.sh`: **aprovado**, exit code 0; **192 testes Python** (4,53 s),
+  testes e vet Go, build/typecheck web, `git diff --check`.
+- Novos testes `TestBacktestsValidationAndUnavailableDatabase` e
+  `TestBacktestsPostgreSQL`: filtros e erros 400, modo padrão source, ambos os modos,
+  estado vazio, seleção anterior a filtros, exclusão de runs com corte/criação futuros,
+  preservação de nulos e amostra insuficiente, snapshots sem benchmarks na contagem,
+  cobertura do último run, estado indisponível sem contagens fictícias e 503 por erro SQL.
+- Integração usa pool pgx com `SET ROLE bdf_reader`, confirmado por `current_user`,
+  em schema temporário somente no banco `bdf_test`. Limpeza remove apenas esse schema;
+  nenhuma coleta ou banco de aplicação é apagado. Dados de teste são sintéticos.
+- `verify.sh` exporta o DSN de testes para Go; job API da CI recebe PostgreSQL dedicado.
+  `go test -count=1` evita reaproveitar cache para checks dependentes de banco externo.
+- OpenAPI documenta envelope, filtros, nulos e limites do bloco de observabilidade.
+  Painel, smoke ponta a ponta e walkthrough humano seguem pendentes. Nenhum gate
+  econômico/metodológico ou autorização de publicação é declarado concluído.
